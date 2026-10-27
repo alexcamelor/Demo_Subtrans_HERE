@@ -243,8 +243,13 @@
 <div id="toast"></div>
 <div id="modal" hidden><div class="box"><h2 id="mdT"></h2><div id="mdB"></div><div class="prog" id="mdP" hidden><div></div></div><div class="row" style="margin-top:14px;justify-content:flex-end" id="mdA"></div></div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script src="jszip.min.js"></script>
+<script>
+  /* Librerías alojadas junto a la página; si faltan, se cargan desde cdnjs */
+  if (!window.XLSX) document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+  if (!window.JSZip) document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>');
+</script>
 <script>
 /* ============================================================
    PARÁMETROS (después de # en la URL)
@@ -404,7 +409,8 @@ async function identifyHERE(loc){
     const interp = h => { for (let i = 0; i < pts.length; i++){ const [h1, v1] = pts[i], [h2, v2] = pts[(i + 1) % pts.length]; const H2 = h2 > h1 ? h2 : h2 + 24, HH = h >= h1 ? h : h + 24; if (HH >= h1 && HH <= H2) return v1 + (v2 - v1) * (HH - h1) / (H2 - h1); } return pts[0][1]; };
     const vl = [...Array(24).keys()].map(h => +interp(h).toFixed(1));
     const vf = vl.map((v, h) => +(Math.min(v * 1.07, (sp.dynamicSpeedInfo?.baseSpeed || v / 3.6) * 3.6)).toFixed(1));
-    const id = (sp.segmentRef || "").replace(/^\$0::/, "").replace(/#.*$/, "") || "HERE";
+    const segN = ((sp.segmentRef || "").match(/(\d+)#/) || [])[1];
+    const id = segN ? `here:cm:segment:${segN}` : "HERE";
     const t = { id_tramo: id, link: null, sentido: rumboTxt(loc.rumbo), rumbo: loc.rumbo, nombre: sp.names?.[0]?.value || "Sin nombre", ruta: sp.routeNumbers?.[0]?.value || "",
       fc: sp.functionalClass || 4, clase: "", urbano: true, limite: sp.speedLimit ? Math.round(sp.speedLimit * 3.6) : null, pistas: null,
       comuna: "", region: "", flujo: null, perfil: true, vl, vf, paths: null, fuente: "HERE Routing" };
