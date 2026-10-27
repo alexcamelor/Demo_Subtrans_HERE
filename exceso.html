@@ -259,7 +259,7 @@
    ============================================================ */
 const HP = new URLSearchParams(location.hash.replace(/^#/, ""));
 const QP = new URLSearchParams(location.search);
-const P = { k: HP.get("k") || QP.get("k"), fl: HP.get("fl") || QP.get("fl"), ak: HP.get("ak") || QP.get("ak") };
+const P = { k: HP.get("k") || QP.get("k"), fl: HP.get("fl") || QP.get("fl"), ak: HP.get("ak") || QP.get("ak"), dk: HP.get("dk") || QP.get("dk") };
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -308,8 +308,9 @@ const inRange = (y, m) => (y > FIRST.y || (y === FIRST.y && m >= FIRST.m)) && (y
 /* ============================================================
    FUENTE DE TRAMOS
    ============================================================ */
-const SRC = P.fl ? "agol" : (P.k ? "here" : "none");
-$("#src").innerHTML = SRC === "agol" ? "Fuente de tramos: <b>HERE GIS Data Suite (capa en ArcGIS Online)</b>"
+const SRC = P.dk ? "file" : P.fl ? "agol" : (P.k ? "here" : "none");
+$("#src").innerHTML = SRC === "file" ? "Fuente de tramos: <b>HERE GIS Data Suite + siniestros CONASET</b> <span id='dbst'>(cargando red…)</span>"
+  : SRC === "agol" ? "Fuente de tramos: <b>HERE GIS Data Suite (capa en ArcGIS Online)</b>"
   : SRC === "here" ? "Fuente de tramos: <b>HERE Routing API</b> (modo respaldo; sin pistas)"
   : "<b style='color:var(--bad)'>Falta configuración:</b> agrega #k=API_KEY_HERE&fl=URL_CAPA&ak=API_KEY_ARCGIS a la dirección.";
 
@@ -359,12 +360,53 @@ const RUMBO_TXT = ["Hacia el norte","Hacia el noreste","Hacia el este","Hacia el
 const rumboTxt = g => RUMBO_TXT[Math.floor(((g + 22.5) % 360) / 45)];
 
 /* ---------- identificación de ubicaciones (Funcionalidades 1 y 5) ---------- */
+/* ---------- red de tramos en archivo cifrado (tramos_demo.bin, AES-GCM + gzip) ---------- */
+let DBP = null;
+function loadDB(){
+  if (DBP) return DBP;
+  DBP = (async () => {
+    busy(true);
+    try {
+      const b64 = P.dk.replace(/-/g, "+").replace(/_/g, "/"); const raw = Uint8Array.from(atob(b64 + "=".repeat((4 - b64.length % 4) % 4)), c => c.charCodeAt(0));
+      const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+      const buf = new Uint8Array(await (await fetch("tramos_demo.bin", { cache: "force-cache" })).arrayBuffer());
+      let gz;
+      try { gz = await crypto.subtle.decrypt({ name: "AES-GCM", iv: buf.slice(0, 12) }, key, buf.slice(12)); }
+      catch(e){ throw new Error("No se pudo descifrar la red de tramos: revisa el parámetro dk de la dirección."); }
+      const txt = await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+      const doc = JSON.parse(txt), F = doc.fields, iV = F.indexOf("vl"), iF = F.indexOf("vf"), iP = F.indexOf("paths");
+      const feats = doc.rows.map(r => {
+        const a = {}; F.forEach((f, i) => { if (i !== iV && i !== iF && i !== iP) a[f] = r[i]; });
+        r[iV].forEach((v, h) => a["vl_" + pad(h)] = v); r[iF].forEach((v, h) => a["vf_" + pad(h)] = v);
+        const paths = r[iP].map(fl => { const pts = []; for (let k = 0; k + 1 < fl.length; k += 2) pts.push([fl[k], fl[k + 1]]); return pts; });
+        return { attributes: a, geometry: { paths } };
+      });
+      const C = 0.002, grid = new Map();
+      feats.forEach((f, idx) => {
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        f.geometry.paths.forEach(p => p.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }));
+        for (let i = Math.floor(x0 / C); i <= Math.floor(x1 / C); i++) for (let j = Math.floor(y0 / C); j <= Math.floor(y1 / C); j++){ const k = i + "_" + j; (grid.get(k) || grid.set(k, []).get(k)).push(idx); }
+      });
+      const near = (lat, lon, m) => { const dy = m / 111000, dx = m / (111000 * Math.cos(rad(lat))), out = new Set();
+        for (let i = Math.floor((lon - dx) / C); i <= Math.floor((lon + dx) / C); i++) for (let j = Math.floor((lat - dy) / C); j <= Math.floor((lat + dy) / C); j++) (grid.get(i + "_" + j) || []).forEach(x => out.add(x));
+        return [...out].map(x => feats[x]); };
+      const st = document.getElementById("dbst"); if (st) st.textContent = `(${nf(feats.length)} tramos)`;
+      return { feats, near };
+    } catch(e){ const st = document.getElementById("dbst"); if (st) { st.textContent = "(error)"; st.style.color = "var(--bad)"; } toast(e.message, 10000); DBP = null; throw e; }
+    finally { busy(false); }
+  })();
+  return DBP;
+}
+async function identifyFile(loc){ const db = await loadDB(); return pickCandidate(loc, db.near(loc.lat, loc.lon, 45)); }
 async function identifyAGOL(loc){
   const j = await agolQuery({ geometry: `${loc.lon},${loc.lat}`, geometryType: "esriGeometryPoint", inSR: 4326, spatialRel: "esriSpatialRelIntersects",
     distance: 40, units: "esriSRUnit_Meter", outFields: "*", returnGeometry: true, outSR: 4326, resultRecordCount: 60 });
-  const feats = j.features || [];
+  return pickCandidate(loc, j.features || []);
+}
+function pickCandidate(loc, feats){
   if (!feats.length) return { status: "err", msg: "No se pudo ubicar el punto sobre una vía de la red (no hay tramos a menos de 40 m). Verifique las coordenadas o muévalo sobre la calzada." };
-  const cands = feats.map(f => ({ f, d: distToPaths(loc, f.geometry.paths), a: angDiff(f.attributes.rumbo_gr, loc.rumbo) }));
+  const cands = feats.map(f => ({ f, d: distToPaths(loc, f.geometry.paths), a: angDiff(f.attributes.rumbo_gr, loc.rumbo) })).filter(c => c.d <= 40);
+  if (!cands.length) return { status: "err", msg: "No se pudo ubicar el punto sobre una vía de la red (no hay tramos a menos de 40 m). Verifique las coordenadas o muévalo sobre la calzada." };
   const ok = cands.filter(c => c.a <= 55).sort((x, y) => x.d - y.d);
   if (!ok.length){
     const near = cands.sort((x, y) => x.d - y.d).slice(0, 3).map(c => `${c.f.attributes.nombre_via} (${c.f.attributes.sentido_desc.toLowerCase()})`);
@@ -453,7 +495,7 @@ async function addLocation(raw){
   if (raw.tramo){ loc.tramo = raw.tramo; loc.status = "ok"; loc.lim = raw.tramo.limite; renderLocs(); drawLocs(); return loc; }
   renderLocs();
   try {
-    const r = SRC === "agol" ? await identifyAGOL(loc) : SRC === "here" ? await identifyHERE(loc) : { status: "err", msg: "No hay fuente de tramos configurada." };
+    const r = SRC === "file" ? await identifyFile(loc) : SRC === "agol" ? await identifyAGOL(loc) : SRC === "here" ? await identifyHERE(loc) : { status: "err", msg: "No hay fuente de tramos configurada." };
     Object.assign(loc, r); loc.lim = loc.tramo?.limite ?? null;
   } catch(e){ loc.status = "err"; loc.msg = "No se pudo consultar la fuente de tramos: " + e.message; }
   renderLocs(); drawLocs(); updateEstimate();
@@ -499,13 +541,20 @@ $$("#locMode button").forEach(b => b.onclick = () => {
 /* ---------- búsqueda por atributos (criterios adicionales) ---------- */
 $("#bGo").onclick = async () => {
   const q = $("#bQ").value.trim(); if (!q) return;
-  if (SRC !== "agol"){ toast("La búsqueda por nombre de vía, comuna o ID de tramo requiere la capa de tramos en ArcGIS Online."); return; }
+  if (SRC !== "agol" && SRC !== "file"){ toast("La búsqueda por nombre de vía, comuna o ID de tramo requiere la red de tramos HGDS."); return; }
   const qq = q.replace(/'/g, "''").toUpperCase();
   let where = `UPPER(nombre_via) LIKE '%${qq}%' OR UPPER(ruta) = '${qq}' OR UPPER(comuna) LIKE '%${qq}%' OR UPPER(region) LIKE '%${qq}%' OR UPPER(id_tramo) = '${qq}'`;
   if (/^\d+$/.test(q)) where += ` OR link_id = ${q}`;
   try {
-    const j = await agolQuery({ where, outFields: "*", returnGeometry: true, outSR: 4326, resultRecordCount: 30, orderByFields: "clase_funcional ASC" });
-    const fs = j.features || [];
+    let fs;
+    if (SRC === "file"){
+      const db = await loadDB(), U = x => String(x ?? "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), QU = U(q);
+      fs = db.feats.filter(({ attributes: a }) => U(a.nombre_via).includes(QU) || U(a.ruta) === QU || U(a.comuna).includes(QU) || U(a.region).includes(QU) || U(a.id_tramo) === QU || String(a.link_id) === q)
+        .sort((x, y) => (x.attributes.clase_funcional - y.attributes.clase_funcional) || ((y.attributes.indice_prioridad || 0) - (x.attributes.indice_prioridad || 0))).slice(0, 30);
+    } else {
+      const j = await agolQuery({ where, outFields: "*", returnGeometry: true, outSR: 4326, resultRecordCount: 30, orderByFields: "clase_funcional ASC" });
+      fs = j.features || [];
+    }
     $("#bRes").innerHTML = fs.length ? fs.map((f, i) => `<div class="loc"><div class="top"><b>${esc(f.attributes.nombre_via)}</b><button class="btn sm" data-i="${i}" style="margin-left:auto">Agregar</button></div>
       <div class="meta">${esc(f.attributes.sentido_desc)} · ${esc(f.attributes.comuna || "")} · límite ${f.attributes.vel_normada ?? "—"} km/h · tramo ${esc(f.attributes.id_tramo)}</div></div>`).join("")
       : `<div class="hint">Sin resultados para "${esc(q)}".</div>`;
@@ -997,6 +1046,7 @@ function startMap(){
 }
 
 /* ---------- arranque ---------- */
+if (SRC === "file") loadDB().catch(() => {});
 if (window.top !== window.self){ $("#framed").hidden = false; $("#openTab").onclick = e => { e.preventDefault(); window.open(location.href, "_blank", "noopener"); }; }
 S.bins = REF_BINS.map(b => b.slice());
 S.months.add(mKey(LAST.y, LAST.m));

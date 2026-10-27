@@ -25,7 +25,8 @@ Opcionales: `&tabs=ruta,iso` (solo esas pestañas: `ruta`, `iso`, `matriz`, `bus
 https://TU_USUARIO.github.io/geoservicio-here/exceso.html#k=API_KEY_HERE&fl=URL_CAPA&ak=API_KEY_ARCGIS
 ```
 
-- `fl`: URL de la capa `Tramos_Velocidad` en ArcGIS Online, terminada en `/FeatureServer/0`.
+- `dk` (recomendado): clave para abrir `tramos_demo.bin`, la red de tramos HGDS con siniestralidad, cifrada con AES-GCM. El archivo va en el repositorio, pero sin la clave no se puede leer. No necesita ArcGIS Online ni API keys.
+- `fl`: URL de la capa `Tramos_Velocidad` en ArcGIS Online, terminada en `/FeatureServer/N` (alternativa a `dk`).
 - `ak`: API key de ArcGIS con acceso de solo lectura a esa capa (Contenido → Nuevo ítem → Credenciales de desarrollador → Credenciales de clave de API).
 - Sin `fl`, la página usa HERE Routing para ubicar los puntos. En ese modo no hay dato de pistas ni de comuna.
 
@@ -49,6 +50,6 @@ Funcionalidades del pliego que cubre `exceso.html`:
 
 ## Publicar en GitHub Pages
 
-1. Crea un repositorio público `geoservicio-here` y sube `index.html`, `exceso.html` y este `README.md`.
+1. Crea un repositorio público y sube `index.html`, `exceso.html`, `tramos_demo.bin`, `xlsx.full.min.js`, `jszip.min.js` y este `README.md`. Las dos librerías (SheetJS y JSZip) van junto a la página para no depender de CDN externos.
 2. *Settings → Pages → Source: Deploy from a branch → main / (root) → Save*.
 3. En 1 o 2 minutos queda en `https://TU_USUARIO.github.io/geoservicio-here/`.
