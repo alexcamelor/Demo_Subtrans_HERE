@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Consulta de Exceso de Velocidad · Demo</title>
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<style>
+  :root{
+    --bg:#f5f7fa; --panel:#fff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea; --soft:#f3f6f9;
+    --accent:#0f62fe; --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --sim:#7a4cc2;
+    --radius:10px; --shadow:0 2px 10px rgba(16,24,40,.08);
+    font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}
+  #app{display:flex;height:100%}
+  #panel{width:430px;min-width:340px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
+  #panelBody{overflow-y:auto;flex:1;padding:0 16px 16px}
+  header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+  header .t{font-weight:700;font-size:15px}
+  header .s{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:#efe7fb;color:var(--sim);vertical-align:middle;margin-left:6px}
+  #busy{margin-left:auto;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;visibility:hidden;flex:0 0 16px}
+  #busy.on{visibility:visible}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #src{font-size:11.5px;color:var(--muted);padding:8px 16px;border-bottom:1px solid var(--line);background:var(--soft)}
+  #src b{color:var(--ink)}
+  h3{font-size:13.5px;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+  h3 .n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;flex:0 0 22px}
+  label.f{display:block;font-size:11.5px;color:var(--muted);margin:8px 0 3px;font-weight:600}
+  input[type=text],input[type=number],input[type=email],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink);font-family:inherit}
+  textarea{min-height:70px;font-family:Consolas,monospace;font-size:12px}
+  input:focus,select:focus,textarea:focus{outline:2px solid #b9cfff;border-color:var(--accent)}
+  .row{display:flex;gap:6px;align-items:flex-end}
+  .row>*{flex:1;min-width:0}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;cursor:pointer}
+  .btn.sec{background:#eef2f6;color:var(--ink)}
+  .btn.sm{padding:5px 9px;font-size:12px}
+  .btn.full{width:100%;margin-top:10px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .seg{display:flex;background:#eef2f6;border-radius:8px;padding:3px;gap:2px;margin-bottom:6px}
+  .seg button{flex:1;border:0;background:transparent;padding:6px;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+  .seg button.on{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .pane{display:none}.pane.on{display:block}
+  .locs{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .loc{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;font-size:12.5px}
+  .loc .top{display:flex;gap:6px;align-items:center}
+  .loc .top b{font-size:13px}
+  .loc .top .x{margin-left:auto;border:0;background:transparent;color:var(--bad);cursor:pointer;font-size:16px;line-height:1}
+  .loc .meta{color:var(--muted);margin-top:3px;line-height:1.4}
+  .loc .lim{display:flex;gap:6px;align-items:center;margin-top:6px}
+  .loc .lim input{width:74px;padding:4px 6px}
+  .loc .msg{margin-top:5px;font-size:12px;line-height:1.35}
+  .chip{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
+  .chip.ok{background:#e6f4ea;color:var(--ok)} .chip.warn{background:#fff4e0;color:var(--warn)} .chip.err{background:#fdecea;color:var(--bad)} .chip.pend{background:#eef2f6;color:var(--muted)}
+  .msg.warn{color:var(--warn)} .msg.err{color:var(--bad)}
+  .months{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+  .yr{display:flex;align-items:center;gap:3px}
+  .yr b{width:38px;font-size:12px;cursor:pointer}
+  .yr button{flex:1;border:1px solid var(--line);background:#fff;border-radius:5px;font-size:10.5px;padding:4px 0;cursor:pointer;color:var(--ink)}
+  .yr button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .yr button:disabled{opacity:.3;cursor:default}
+  .quick{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  table.bins{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+  table.bins td,table.bins th{border-bottom:1px solid var(--line);padding:4px 3px;text-align:left}
+  table.bins th{font-size:11px;color:var(--muted);font-weight:600}
+  table.bins input{padding:4px 6px;width:86px}
+  table.bins td:nth-child(3){font-size:12px}
+  table.bins .rm{border:0;background:transparent;color:var(--bad);cursor:pointer;font-size:15px}
+  .chk{display:flex;flex-direction:column;gap:6px;font-size:13px;margin-top:4px}
+  .chk label{display:flex;gap:7px;align-items:flex-start;cursor:pointer}
+  .chk small{color:var(--muted);display:block}
+  .fmts{display:flex;flex-wrap:wrap;gap:6px}
+  .fmts label{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer;display:flex;gap:5px;align-items:center}
+  .est{font-size:12.5px;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--soft);line-height:1.45}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+  main{flex:1;min-width:0;display:flex;flex-direction:column}
+  #viewWrap{position:relative;height:42%;min-height:220px;border-bottom:1px solid var(--line)}
+  #viewDiv{position:absolute;inset:0}
+  #bottom{flex:1;min-height:0;display:flex;flex-direction:column;background:#fff}
+  #bottom nav{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line)}
+  #bottom nav button{border:0;background:transparent;padding:6px 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  #bottom nav button.on{background:#e8f0ff;color:var(--accent)}
+  .bpane{display:none;overflow:auto;padding:12px 14px;flex:1}
+  .bpane.on{display:block}
+  table.prev{border-collapse:collapse;font-size:12px;white-space:nowrap}
+  table.prev th,table.prev td{border:1px solid var(--line);padding:4px 6px}
+  table.prev th{background:var(--soft);position:sticky;top:0}
+  table.prev td.num{text-align:right}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+  .card h4{margin:0 0 2px;font-size:14px}
+  .card .sub{font-size:12px;color:var(--muted)}
+  .kp{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+  .kp div{background:var(--soft);border-radius:8px;padding:6px 8px}
+  .kp b{display:block;font-size:15px}
+  .kp span{font-size:10.5px;color:var(--muted)}
+  .bars{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px}
+  .bar{display:grid;grid-template-columns:120px 1fr 64px;gap:6px;align-items:center}
+  .bar .tr{background:var(--soft);border-radius:4px;height:12px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:4px}
+  .bar .v{text-align:right;color:var(--muted)}
+  table.hist{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.hist th,table.hist td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
+  table.hist th{font-size:11.5px;color:var(--muted)}
+  table.hist code{font-size:11.5px}
+  .empty{color:var(--muted);font-size:13px;padding:10px 0}
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1b2430;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;max-width:min(92vw,560px);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:var(--shadow)}
+  #toast.on{opacity:1}
+  #modal{position:fixed;inset:0;background:rgba(16,24,40,.45);display:grid;place-items:center;z-index:70;padding:16px}
+  #modal[hidden]{display:none}
+  #modal .box{background:#fff;border-radius:14px;max-width:480px;width:100%;padding:20px;box-shadow:var(--shadow)}
+  #modal h2{margin:0 0 8px;font-size:17px}
+  #modal p{font-size:13px;line-height:1.5;color:var(--ink)}
+  .prog{height:8px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:10px}
+  .prog div{height:100%;width:0;background:var(--accent);transition:width .15s}
+  @media (max-width:860px){
+    #app{flex-direction:column;height:auto;min-height:100%}
+    #panel{width:100%;min-width:0;border-right:0}
+    #panelBody{overflow:visible}
+    main{min-height:90vh}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <header>
+      <div>
+        <div class="t">Consulta de exceso de velocidad <span class="badge">DEMO</span></div>
+        <div class="s">Conteos por tramo de exceso y tramo horario · HERE</div>
+      </div>
+      <div id="busy"></div>
+    </header>
+    <div id="src">Fuente de tramos: <b>…</b></div>
+    <div id="framed" hidden style="font-size:11.5px;padding:6px 16px;background:#fff8e6;border-bottom:1px solid var(--line)">¿No se descargan los archivos? <a href="#" id="openTab">Abrir el módulo en una pestaña nueva</a></div>
+    <div id="panelBody">
+
+      <h3><span class="n">1</span>Ubicaciones</h3>
+      <div class="seg" id="locMode">
+        <button data-p="pIndiv" class="on">Individual</button>
+        <button data-p="pMasiva">Masiva</button>
+        <button data-p="pBuscar">Buscar</button>
+      </div>
+      <div class="pane on" id="pIndiv">
+        <div class="row">
+          <div><label class="f">ID punto</label><input type="number" id="iId" min="1" step="1"></div>
+          <div><label class="f">Sentido</label>
+            <select id="iSen">
+              <option value="0">Hacia el norte</option><option value="45">Hacia el noreste</option><option value="90">Hacia el este</option><option value="135">Hacia el sureste</option>
+              <option value="180">Hacia el sur</option><option value="225">Hacia el suroeste</option><option value="270">Hacia el oeste</option><option value="315">Hacia el noroeste</option>
+            </select></div>
+        </div>
+        <div class="row">
+          <div><label class="f">Latitud (grados decimales)</label><input type="text" id="iLat" placeholder="-33.4446"></div>
+          <div><label class="f">Longitud (grados decimales)</label><input type="text" id="iLon" placeholder="-70.6529"></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn sec" id="iPick" type="button">Elegir en el mapa</button>
+          <button class="btn" id="iAdd" type="button">Agregar ubicación</button>
+        </div>
+      </div>
+      <div class="pane" id="pMasiva">
+        <label class="f">Archivo (XLSX, CSV, GeoJSON, KML o Shapefile .zip)</label>
+        <input type="file" id="mFile" accept=".xlsx,.xls,.csv,.txt,.geojson,.json,.kml,.zip">
+        <label class="f">…o pega filas: id_punto; latitud; longitud; sentido</label>
+        <textarea id="mText" placeholder="101;-33.44455;-70.65293;oeste&#10;102;-33.4566;-70.8651;270"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn sec" id="mTpl" type="button">Descargar plantilla</button>
+          <button class="btn" id="mGo" type="button">Cargar ubicaciones</button>
+        </div>
+        <p class="hint">Columnas reconocidas: id_punto, latitud/lat/y, longitud/lon/x, sentido (norte, sur, este, oeste, N, NE… u ángulo 0-359).</p>
+      </div>
+      <div class="pane" id="pBuscar">
+        <label class="f">Nombre de vía o ruta, comuna, región o ID de tramo</label>
+        <div class="row"><div><input type="text" id="bQ" placeholder="Ej: Vicuña Mackenna, Maipú, 68"></div><button class="btn" id="bGo" type="button" style="flex:0 0 auto">Buscar</button></div>
+        <div id="bRes" class="locs"></div>
+      </div>
+      <div class="locs" id="locList"></div>
+
+      <h3><span class="n">2</span>Período y tramos horarios</h3>
+      <div class="months" id="months"></div>
+      <div class="quick">
+        <button class="btn sec sm" data-q="last">Último mes</button>
+        <button class="btn sec sm" data-q="last3">Últimos 3 meses</button>
+        <button class="btn sec sm" data-q="2025">Año 2025</button>
+        <button class="btn sec sm" data-q="clear">Limpiar</button>
+      </div>
+      <div class="row">
+        <div><label class="f">Tramos horarios</label>
+          <select id="hMode"><option value="fixed">Duración fija</option><option value="custom">Rangos personalizados</option></select></div>
+        <div id="hFixedBox"><label class="f">Duración (1 a 24 h)</label><input type="number" id="hDur" min="1" max="24" step="1" value="1"></div>
+      </div>
+      <div id="hCustomBox" style="display:none">
+        <label class="f">Rangos (hh-hh separados por coma)</label>
+        <input type="text" id="hCustom" value="00-06,06-10,10-17,17-21,21-24">
+      </div>
+      <div class="hint" id="hPreview"></div>
+
+      <h3><span class="n">3</span>Tramos de exceso de velocidad</h3>
+      <table class="bins" id="bins"><thead><tr><th>Desde (km/h sobre el límite)</th><th>Hasta</th><th>Etiqueta</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="quick">
+        <button class="btn sec sm" id="binAdd">+ Agregar tramo</button>
+        <button class="btn sec sm" id="binRef">Tramos referenciales del pliego</button>
+      </div>
+      <p class="hint">Deja "Desde" vacío para "sin mínimo" y "Hasta" vacío para "sin máximo". Usa valores negativos para tramos bajo el límite. El límite de cada ubicación se puede corregir arriba sin alterar la base de datos.</p>
+
+      <h3><span class="n">4</span>Formato y opciones</h3>
+      <div class="fmts" id="fmts">
+        <label><input type="checkbox" value="xlsx" checked>XLSX</label>
+        <label><input type="checkbox" value="csv">CSV</label>
+        <label><input type="checkbox" value="geojson">GeoJSON</label>
+        <label><input type="checkbox" value="kml">KML</label>
+        <label><input type="checkbox" value="shp">Shapefile</label>
+      </div>
+      <div class="chk" style="margin-top:10px">
+        <label><input type="checkbox" id="oLanes" checked><span>Incluir cantidad de pistas<small>Funcionalidad opcional 1 · dato HERE por sentido</small></span></label>
+        <label><input type="checkbox" id="oTypes"><span>Desglosar por tipo de vehículo<small>Funcionalidad opcional 2 · livianos, buses y camiones</small></span></label>
+      </div>
+      <label class="f">Correo para notificar consultas masivas</label>
+      <input type="email" id="oMail" placeholder="analista@mtt.gob.cl">
+
+      <div class="est" id="est"></div>
+      <button class="btn full" id="go">Generar archivo</button>
+      <p class="hint">Conteos y distribuciones de velocidad <b>simulados</b> para el demo a partir de los patrones históricos de velocidad HERE de cada tramo. En el servicio contratado provienen de HERE Traffic Analytics.</p>
+    </div>
+  </aside>
+  <main>
+    <div id="viewWrap"><div id="viewDiv"></div></div>
+    <div id="bottom">
+      <nav id="btabs">
+        <button data-b="bSum" class="on">Resumen</button>
+        <button data-b="bPrev">Vista previa</button>
+        <button data-b="bHist">Historial de archivos</button>
+      </nav>
+      <div class="bpane on" id="bSum"><div class="empty">Agrega ubicaciones y genera una consulta para ver el resumen.</div></div>
+      <div class="bpane" id="bPrev"><div class="empty">Sin datos todavía.</div></div>
+      <div class="bpane" id="bHist"></div>
+    </div>
+  </main>
+</div>
+<div id="toast"></div>
+<div id="modal" hidden><div class="box"><h2 id="mdT"></h2><div id="mdB"></div><div class="prog" id="mdP" hidden><div></div></div><div class="row" style="margin-top:14px;justify-content:flex-end" id="mdA"></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* ============================================================
+   PARÁMETROS (después de # en la URL)
+   k   = API key de HERE (obligatoria para mapa base y respaldo)
+   fl  = URL de la capa Tramos_Velocidad (…/FeatureServer/0)
+   ak  = API key de ArcGIS con acceso a esa capa
+   ============================================================ */
+const HP = new URLSearchParams(location.hash.replace(/^#/, ""));
+const QP = new URLSearchParams(location.search);
+const P = { k: HP.get("k") || QP.get("k"), fl: HP.get("fl") || QP.get("fl"), ak: HP.get("ak") || QP.get("ak") };
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let tT; function toast(m, ms = 5000){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(tT); tT = setTimeout(() => t.classList.remove("on"), ms); }
+let bN = 0; function busy(on){ bN += on ? 1 : -1; $("#busy").classList.toggle("on", bN > 0); }
+const nf = (n, d = 0) => Number(n).toLocaleString("es-CL", { maximumFractionDigits: d, minimumFractionDigits: d });
+const pad = n => String(n).padStart(2, "0");
+
+/* ---------- aleatorio determinista ---------- */
+function hashStr(s){ let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function erf(x){ const s = Math.sign(x); x = Math.abs(x); const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return s * y; }
+const Phi = z => z === Infinity ? 1 : z === -Infinity ? 0 : 0.5 * (1 + erf(z / Math.SQRT2));
+
+/* ---------- modelo de simulación (coherente con la capa de tramos) ---------- */
+const W_LAB = norm([0.8,0.5,0.4,0.4,0.6,1.5,3.5,6.5,7.5,6.0,5.2,5.2,5.4,5.6,5.6,5.8,6.4,7.4,7.6,6.4,4.8,3.6,2.6,1.6]);
+const W_FDS = norm([1.6,1.2,0.9,0.7,0.6,0.8,1.4,2.4,3.6,4.8,5.8,6.4,6.6,6.6,6.4,6.2,6.2,6.2,6.0,5.4,4.6,3.8,3.0,2.2]);
+function norm(a){ const s = a.reduce((x, y) => x + y, 0); return a.map(v => v / s); }
+const MONTH_F = [0.88,0.80,1.03,1.02,1.02,1.00,0.97,1.02,0.98,1.03,1.03,1.00];
+const YEAR_F = { 2021: 0.86, 2022: 0.96, 2023: 1.00, 2024: 1.02, 2025: 1.04, 2026: 1.05 };
+const CVF = { 1: .11, 2: .13, 3: .15, 4: .17, 5: .19 };
+const BASE_CARRIL = { 1: 16000, 2: 11000, 3: 7000, 4: 3500, 5: 900 };
+const TYPES = [{ k: "liv", n: "Livianos", off: 0 }, { k: "bus", n: "Buses", off: -4 }, { k: "cam", n: "Camiones", off: -9 }];
+
+function prepModel(t){
+  const r = rng(hashStr(t.id_tramo));
+  const cvk = 0.9 + 0.3 * r();
+  let flujo = t.flujo;
+  if (!flujo){ const base = BASE_CARRIL[t.fc] || 2000; flujo = (t.pistas || 1) * base * (0.75 + 0.5 * r()) * (t.urbano ? 1 : 0.7) * (5 + 1.6) / 7; }
+  const qLab = 7 * flujo / (5 + 1.6);
+  const shares = (t.fc <= 2 && !t.urbano) ? [0.74, 0.04, 0.22] : [0.86, 0.06, 0.08];
+  return { cv: (CVF[t.fc] || .17) * cvk, qLab, qFds: qLab * 0.8, shares };
+}
+
+/* ---------- estado ---------- */
+const S = { locs: [], months: new Set(), bins: [], pick: false, last: null };
+const today = new Date();
+const LAST = (() => { const d = new Date(today.getFullYear(), today.getMonth() - (today.getDate() > 10 ? 1 : 2), 1); return { y: d.getFullYear(), m: d.getMonth() }; })();
+const FIRST = { y: 2021, m: 0 };
+const mKey = (y, m) => `${y}-${pad(m + 1)}`;
+const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const inRange = (y, m) => (y > FIRST.y || (y === FIRST.y && m >= FIRST.m)) && (y < LAST.y || (y === LAST.y && m <= LAST.m));
+
+/* ============================================================
+   FUENTE DE TRAMOS
+   ============================================================ */
+const SRC = P.fl ? "agol" : (P.k ? "here" : "none");
+$("#src").innerHTML = SRC === "agol" ? "Fuente de tramos: <b>HERE GIS Data Suite (capa en ArcGIS Online)</b>"
+  : SRC === "here" ? "Fuente de tramos: <b>HERE Routing API</b> (modo respaldo; sin pistas)"
+  : "<b style='color:var(--bad)'>Falta configuración:</b> agrega #k=API_KEY_HERE&fl=URL_CAPA&ak=API_KEY_ARCGIS a la dirección.";
+
+async function agolQuery(params){
+  const u = new URL(P.fl.replace(/\/+$/, "") + "/query");
+  Object.entries(Object.assign({ f: "json" }, params)).forEach(([k, v]) => u.searchParams.set(k, v));
+  if (P.ak) u.searchParams.set("token", P.ak);
+  busy(true);
+  try {
+    const j = await (await fetch(u)).json();
+    if (j.error) throw new Error(`ArcGIS ${j.error.code}: ${j.error.message}${j.error.code === 498 || j.error.code === 499 ? " (revisa la API key de ArcGIS)" : ""}`);
+    return j;
+  } finally { busy(false); }
+}
+const PROFILE_FIELDS = [...Array(24).keys()].map(h => "vl_" + pad(h)).concat([...Array(24).keys()].map(h => "vf_" + pad(h)));
+function tramoFromAttrs(a, geom){
+  return {
+    id_tramo: a.id_tramo, link: a.link_id, sentido: a.sentido_desc, rumbo: a.rumbo_gr, nombre: a.nombre_via || "Sin nombre", ruta: a.ruta || "",
+    fc: a.clase_funcional, clase: a.clase_desc, urbano: a.urbano === "Y", limite: a.vel_normada || null, pistas: a.pistas || null,
+    comuna: a.comuna || "", region: a.region || "", flujo: a.sim_flujo_diario || null, perfil: a.perfil_historico !== "No",
+    vl: [...Array(24).keys()].map(h => a["vl_" + pad(h)]), vf: [...Array(24).keys()].map(h => a["vf_" + pad(h)]),
+    paths: geom?.paths || null, fuente: "HGDS",
+    sin: a.sin_total ?? null, sinFall: a.sin_fallecidos ?? null, sinVel: a.sin_velocidad ?? null, prio: a.prioridad || null, iprio: a.indice_prioridad ?? null
+  };
+}
+
+/* geometría */
+const R = 6371000, rad = d => d * Math.PI / 180;
+function distM(a, b){ const x = rad(b.lon - a.lon) * Math.cos(rad((a.lat + b.lat) / 2)), y = rad(b.lat - a.lat); return Math.sqrt(x * x + y * y) * R; }
+function distToPaths(p, paths){
+  let best = Infinity; const k = Math.cos(rad(p.lat));
+  for (const path of paths) for (let i = 0; i + 1 < path.length; i++){
+    const ax = (path[i][0] - p.lon) * k, ay = path[i][1] - p.lat, bx = (path[i + 1][0] - p.lon) * k, by = path[i + 1][1] - p.lat;
+    const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy; let t = L ? -(ax * dx + ay * dy) / L : 0; t = Math.max(0, Math.min(1, t));
+    const x = ax + t * dx, y = ay + t * dy; best = Math.min(best, Math.sqrt(x * x + y * y) * rad(1) * R);
+  }
+  return best;
+}
+const angDiff = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+function destPt(lat, lon, brg, d){
+  const b = rad(brg), la = rad(lat), lo = rad(lon);
+  const la2 = Math.asin(Math.sin(la) * Math.cos(d / R) + Math.cos(la) * Math.sin(d / R) * Math.cos(b));
+  const lo2 = lo + Math.atan2(Math.sin(b) * Math.sin(d / R) * Math.cos(la), Math.cos(d / R) - Math.sin(la) * Math.sin(la2));
+  return [la2 * 180 / Math.PI, lo2 * 180 / Math.PI];
+}
+const RUMBO_TXT = ["Hacia el norte","Hacia el noreste","Hacia el este","Hacia el sureste","Hacia el sur","Hacia el suroeste","Hacia el oeste","Hacia el noroeste"];
+const rumboTxt = g => RUMBO_TXT[Math.floor(((g + 22.5) % 360) / 45)];
+
+/* ---------- identificación de ubicaciones (Funcionalidades 1 y 5) ---------- */
+async function identifyAGOL(loc){
+  const j = await agolQuery({ geometry: `${loc.lon},${loc.lat}`, geometryType: "esriGeometryPoint", inSR: 4326, spatialRel: "esriSpatialRelIntersects",
+    distance: 40, units: "esriSRUnit_Meter", outFields: "*", returnGeometry: true, outSR: 4326, resultRecordCount: 60 });
+  const feats = j.features || [];
+  if (!feats.length) return { status: "err", msg: "No se pudo ubicar el punto sobre una vía de la red (no hay tramos a menos de 40 m). Verifique las coordenadas o muévalo sobre la calzada." };
+  const cands = feats.map(f => ({ f, d: distToPaths(loc, f.geometry.paths), a: angDiff(f.attributes.rumbo_gr, loc.rumbo) }));
+  const ok = cands.filter(c => c.a <= 55).sort((x, y) => x.d - y.d);
+  if (!ok.length){
+    const near = cands.sort((x, y) => x.d - y.d).slice(0, 3).map(c => `${c.f.attributes.nombre_via} (${c.f.attributes.sentido_desc.toLowerCase()})`);
+    return { status: "err", msg: `El sentido indicado no coincide con las vías cercanas: ${[...new Set(near)].join("; ")}. Corrija el sentido de circulación.` };
+  }
+  const best = ok[0], t = tramoFromAttrs(best.f.attributes, best.f.geometry);
+  const warns = [];
+  if (best.d > 20) warns.push(`El punto está a ${Math.round(best.d)} m del eje de la vía; se asignó al tramo más cercano.`);
+  if (!t.limite) warns.push("El tramo no tiene límite registrado: ingrese uno manualmente para la consulta.");
+  if (!t.perfil) warns.push("El tramo no tiene patrón histórico HERE; se usa su velocidad promedio.");
+  return { status: warns.length ? "warn" : "ok", msg: warns.join(" "), tramo: t };
+}
+
+async function hereRoute(loc, dep){
+  const [la2, lo2] = destPt(loc.lat, loc.lon, loc.rumbo, 80);
+  const u = new URL("https://router.hereapi.com/v8/routes");
+  u.searchParams.set("transportMode", "car");
+  u.searchParams.set("origin", `${loc.lat},${loc.lon};course=${loc.rumbo};radius=35`);
+  u.searchParams.set("destination", `${la2.toFixed(6)},${lo2.toFixed(6)};course=${loc.rumbo}`);
+  u.searchParams.set("return", "summary,polyline");
+  u.searchParams.set("spans", "names,functionalClass,speedLimit,length,dynamicSpeedInfo,segmentRef,routeNumbers");
+  if (dep) u.searchParams.set("departureTime", dep);
+  u.searchParams.set("apiKey", P.k);
+  const j = await (await fetch(u)).json();
+  if (j.title) throw new Error(`HERE: ${j.title}${j.cause ? " — " + j.cause : ""}`);
+  return j.routes?.[0]?.sections?.[0];
+}
+async function identifyHERE(loc){
+  busy(true);
+  try {
+    const s = await hereRoute(loc);
+    if (!s) return { status: "err", msg: "HERE no encontró una vía circulable en ese punto y sentido. Verifique coordenadas y sentido." };
+    const snap = s.departure?.place?.location, off = snap ? distM(loc, { lat: snap.lat, lon: snap.lng }) : 0;
+    if (off > 40) return { status: "err", msg: `El punto está a ${Math.round(off)} m de la vía más cercana. Verifique las coordenadas.` };
+    if (s.summary.length > 400) return { status: "err", msg: "El sentido indicado obliga a un desvío: probablemente no coincide con el sentido de circulación de la vía en ese punto." };
+    const sp = s.spans.find(x => x.length >= 15) || s.spans[0];
+    const wed = new Date(); wed.setDate(wed.getDate() + ((10 - wed.getDay()) % 7 || 7));
+    const ymd = `${wed.getFullYear()}-${pad(wed.getMonth() + 1)}-${pad(wed.getDate())}`;
+    const HRS = [2, 7, 8, 13, 18, 21];
+    const sp2 = await Promise.all(HRS.map(h => hereRoute(loc, `${ymd}T${pad(h)}:00:00`).catch(() => null)));
+    const pts = HRS.map((h, i) => { const x = sp2[i]?.spans?.find(z => z.segmentRef === sp.segmentRef) || sp2[i]?.spans?.[0]; return [h, (x?.dynamicSpeedInfo?.trafficSpeed || sp.dynamicSpeedInfo?.baseSpeed || 8) * 3.6]; });
+    const interp = h => { for (let i = 0; i < pts.length; i++){ const [h1, v1] = pts[i], [h2, v2] = pts[(i + 1) % pts.length]; const H2 = h2 > h1 ? h2 : h2 + 24, HH = h >= h1 ? h : h + 24; if (HH >= h1 && HH <= H2) return v1 + (v2 - v1) * (HH - h1) / (H2 - h1); } return pts[0][1]; };
+    const vl = [...Array(24).keys()].map(h => +interp(h).toFixed(1));
+    const vf = vl.map((v, h) => +(Math.min(v * 1.07, (sp.dynamicSpeedInfo?.baseSpeed || v / 3.6) * 3.6)).toFixed(1));
+    const id = (sp.segmentRef || "").replace(/^\$0::/, "").replace(/#.*$/, "") || "HERE";
+    const t = { id_tramo: id, link: null, sentido: rumboTxt(loc.rumbo), rumbo: loc.rumbo, nombre: sp.names?.[0]?.value || "Sin nombre", ruta: sp.routeNumbers?.[0]?.value || "",
+      fc: sp.functionalClass || 4, clase: "", urbano: true, limite: sp.speedLimit ? Math.round(sp.speedLimit * 3.6) : null, pistas: null,
+      comuna: "", region: "", flujo: null, perfil: true, vl, vf, paths: null, fuente: "HERE Routing" };
+    const warns = ["Modo respaldo: sin dato de pistas ni comuna."];
+    if (!t.limite) warns.push("La vía no tiene límite registrado: ingrese uno manualmente.");
+    return { status: "warn", msg: warns.join(" "), tramo: t };
+  } finally { busy(false); }
+}
+
+function validateCoords(lat, lon){
+  const errs = [];
+  if (!isFinite(lat) || !isFinite(lon)) errs.push("Coordenadas con formato inválido: use grados decimales con punto (ej: -33.4446).");
+  else {
+    if (lat < -56.6 || lat > -17.4) errs.push(`Latitud ${lat} fuera de Chile (debe estar entre -56,6 y -17,4).`);
+    if (lon < -110 || lon > -66) errs.push(`Longitud ${lon} fuera de Chile (debe estar entre -110 y -66).`);
+    if (lat > 0 || lon > 0) errs.push("Revise el signo: en Chile la latitud y la longitud son negativas.");
+  }
+  return errs;
+}
+function parseSentido(v){
+  if (v === null || v === undefined || v === "") return null;
+  const s = String(v).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/^hacia (el )?/, "");
+  if (/^-?\d+(\.\d+)?$/.test(s)){ const n = parseFloat(s); return n >= 0 && n < 360 ? n : null; }
+  const M = { n: 0, norte: 0, ne: 45, noreste: 45, nororiente: 45, e: 90, este: 90, oriente: 90, se: 135, sureste: 135, suroriente: 135,
+    s: 180, sur: 180, so: 225, sw: 225, suroeste: 225, surponiente: 225, o: 270, w: 270, oeste: 270, poniente: 270, no: 315, nw: 315, noroeste: 315, norponiente: 315 };
+  return M[s] ?? null;
+}
+
+async function addLocation(raw){
+  const lat = parseFloat(String(raw.lat).replace(",", ".")), lon = parseFloat(String(raw.lon).replace(",", "."));
+  const rumbo = typeof raw.rumbo === "number" ? raw.rumbo : parseSentido(raw.sentido);
+  let id = raw.id !== undefined && raw.id !== "" && raw.id !== null ? Number(raw.id) : null;
+  const loc = { uid: Math.random().toString(36).slice(2), id, lat, lon, rumbo, status: "pend", msg: "", tramo: null, lim: null };
+  const errs = validateCoords(lat, lon);
+  if (id === null || !Number.isInteger(id) || id < 0) errs.push("ID punto debe ser un número entero.");
+  else if (S.locs.some(l => l.id === id)) errs.push(`El ID punto ${id} ya existe en la consulta.`);
+  if (rumbo === null || rumbo === undefined) errs.push(`Sentido de circulación no reconocido ("${raw.sentido ?? ""}"). Use norte, sur, este, oeste, NE… o un ángulo 0-359.`);
+  S.locs.push(loc);
+  if (errs.length){ loc.status = "err"; loc.msg = errs.join(" "); renderLocs(); return loc; }
+  if (raw.tramo){ loc.tramo = raw.tramo; loc.status = "ok"; loc.lim = raw.tramo.limite; renderLocs(); drawLocs(); return loc; }
+  renderLocs();
+  try {
+    const r = SRC === "agol" ? await identifyAGOL(loc) : SRC === "here" ? await identifyHERE(loc) : { status: "err", msg: "No hay fuente de tramos configurada." };
+    Object.assign(loc, r); loc.lim = loc.tramo?.limite ?? null;
+  } catch(e){ loc.status = "err"; loc.msg = "No se pudo consultar la fuente de tramos: " + e.message; }
+  renderLocs(); drawLocs(); updateEstimate();
+  return loc;
+}
+function nextId(){ return S.locs.reduce((m, l) => Math.max(m, l.id || 0), 100) + 1; }
+
+function renderLocs(){
+  const box = $("#locList");
+  if (!S.locs.length){ box.innerHTML = `<div class="hint">Sin ubicaciones. Agrega una, carga un archivo o busca por nombre.</div>`; updateEstimate(); return; }
+  box.innerHTML = S.locs.map(l => {
+    const t = l.tramo, chip = { ok: ["ok", "Ubicado"], warn: ["warn", "Con aviso"], err: ["err", "Error"], pend: ["pend", "Ubicando…"] }[l.status];
+    return `<div class="loc" data-u="${l.uid}">
+      <div class="top"><b>ID ${esc(l.id ?? "—")}</b><span class="chip ${chip[0]}">${chip[1]}</span><span style="color:var(--muted)">${isFinite(l.lat) ? l.lat.toFixed(5) + ", " + l.lon.toFixed(5) : ""} · ${l.rumbo != null ? rumboTxt(l.rumbo).toLowerCase() : "sin sentido"}</span><button class="x" title="Quitar">×</button></div>
+      ${t ? `<div class="meta"><b>${esc(t.nombre)}</b>${t.ruta ? " · Ruta " + esc(t.ruta) : ""} · ${esc(t.sentido)}<br>Tramo ${esc(t.id_tramo)}${t.comuna ? " · " + esc(t.comuna) : ""}${t.pistas ? " · " + t.pistas + " pista(s)" : ""}${t.prio ? " · prioridad " + esc(t.prio.toLowerCase()) : ""}</div>
+      <div class="lim">Límite aplicado: <input type="number" min="5" max="150" value="${l.lim ?? ""}" placeholder="km/h"> km/h <span style="color:var(--muted)">${t.limite ? "(registrado: " + t.limite + ")" : "(sin registro)"}</span>${t.limite && l.lim !== t.limite ? ` <button class="btn sec sm rs">Restaurar</button>` : ""}</div>` : ""}
+      ${l.msg ? `<div class="msg ${l.status === "err" ? "err" : "warn"}">${esc(l.msg)}</div>` : ""}
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".loc").forEach(el => {
+    const l = S.locs.find(x => x.uid === el.dataset.u);
+    el.querySelector(".x").onclick = () => { S.locs = S.locs.filter(x => x !== l); renderLocs(); drawLocs(); };
+    const inp = el.querySelector(".lim input");
+    if (inp) inp.onchange = () => { const v = parseFloat(inp.value); l.lim = v > 0 ? Math.round(v) : null; renderLocs(); };
+    const rs = el.querySelector(".rs");
+    if (rs) rs.onclick = () => { l.lim = l.tramo.limite; renderLocs(); };
+  });
+  updateEstimate();
+}
+
+/* ---------- carga individual ---------- */
+$("#iId").value = 101;
+$("#iAdd").onclick = async () => {
+  const raw = { id: $("#iId").value, lat: $("#iLat").value, lon: $("#iLon").value, rumbo: parseFloat($("#iSen").value) };
+  await addLocation(raw);
+  $("#iId").value = nextId();
+};
+$$("#locMode button").forEach(b => b.onclick = () => {
+  $$("#locMode button").forEach(x => x.classList.toggle("on", x === b));
+  $$("#pIndiv,#pMasiva,#pBuscar").forEach(p => p.classList.toggle("on", p.id === b.dataset.p));
+});
+
+/* ---------- búsqueda por atributos (criterios adicionales) ---------- */
+$("#bGo").onclick = async () => {
+  const q = $("#bQ").value.trim(); if (!q) return;
+  if (SRC !== "agol"){ toast("La búsqueda por nombre de vía, comuna o ID de tramo requiere la capa de tramos en ArcGIS Online."); return; }
+  const qq = q.replace(/'/g, "''").toUpperCase();
+  let where = `UPPER(nombre_via) LIKE '%${qq}%' OR UPPER(ruta) = '${qq}' OR UPPER(comuna) LIKE '%${qq}%' OR UPPER(region) LIKE '%${qq}%' OR UPPER(id_tramo) = '${qq}'`;
+  if (/^\d+$/.test(q)) where += ` OR link_id = ${q}`;
+  try {
+    const j = await agolQuery({ where, outFields: "*", returnGeometry: true, outSR: 4326, resultRecordCount: 30, orderByFields: "clase_funcional ASC" });
+    const fs = j.features || [];
+    $("#bRes").innerHTML = fs.length ? fs.map((f, i) => `<div class="loc"><div class="top"><b>${esc(f.attributes.nombre_via)}</b><button class="btn sm" data-i="${i}" style="margin-left:auto">Agregar</button></div>
+      <div class="meta">${esc(f.attributes.sentido_desc)} · ${esc(f.attributes.comuna || "")} · límite ${f.attributes.vel_normada ?? "—"} km/h · tramo ${esc(f.attributes.id_tramo)}</div></div>`).join("")
+      : `<div class="hint">Sin resultados para "${esc(q)}".</div>`;
+    $$("#bRes button").forEach(b => b.onclick = () => {
+      const f = fs[+b.dataset.i], path = f.geometry.paths[0], mid = path[Math.floor(path.length / 2)];
+      const t = tramoFromAttrs(f.attributes, f.geometry);
+      addLocation({ id: nextId(), lat: mid[1], lon: mid[0], rumbo: f.attributes.rumbo_gr, tramo: t });
+      toast("Ubicación agregada desde el tramo " + t.id_tramo, 2500);
+    });
+  } catch(e){ toast(e.message, 8000); }
+};
+$("#bQ").addEventListener("keydown", e => { if (e.key === "Enter") $("#bGo").click(); });
+
+/* ---------- carga masiva (Funcionalidad 6) ---------- */
+const normK = k => String(k).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
+function pickCols(obj){
+  const map = {}; for (const k of Object.keys(obj)) map[normK(k)] = k;
+  const f = (...c) => { for (const x of c) if (map[x] !== undefined) return map[x]; return null; };
+  return { id: f("idpunto", "id", "punto", "idpto", "codigo"), lat: f("latitud", "lat", "y"), lon: f("longitud", "lon", "lng", "long", "x"), sen: f("sentido", "direccion", "rumbo", "sentidocirculacion", "heading") };
+}
+function rowsToRaw(rows){
+  if (!rows.length) return [];
+  const c = pickCols(rows[0]);
+  if (!c.lat || !c.lon) throw new Error("No encontré columnas de latitud y longitud (latitud/lat/y, longitud/lon/x).");
+  return rows.map(r => ({ id: c.id ? r[c.id] : "", lat: r[c.lat], lon: r[c.lon], sentido: c.sen ? r[c.sen] : "" }));
+}
+function parseDelimited(txt){
+  const lines = txt.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return [];
+  const first = lines[0];
+  const sep = [";", "\t", ","].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+  const split = l => { const out = []; let cur = "", q = false; for (const ch of l){ if (ch === '"'){ q = !q; continue; } if (ch === sep && !q){ out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(s => s.trim()); };
+  const head = split(first);
+  const hasHeader = head.some(h => /[a-z]/i.test(h) && isNaN(parseFloat(h)));
+  if (hasHeader) return lines.slice(1).map(l => { const v = split(l); return Object.fromEntries(head.map((h, i) => [h, v[i]])); });
+  return lines.map(l => { const v = split(l); return { id_punto: v[0], latitud: v[1], longitud: v[2], sentido: v[3] }; });
+}
+function parseKML(txt){
+  const doc = new DOMParser().parseFromString(txt, "text/xml");
+  return [...doc.getElementsByTagName("Placemark")].map(pm => {
+    const c = pm.getElementsByTagName("coordinates")[0]?.textContent.trim().split(/\s+/)[0].split(",") || [];
+    const props = { nombre: pm.getElementsByTagName("name")[0]?.textContent };
+    [...pm.getElementsByTagName("Data")].forEach(d => props[d.getAttribute("name")] = d.getElementsByTagName("value")[0]?.textContent);
+    [...pm.getElementsByTagName("SimpleData")].forEach(d => props[d.getAttribute("name")] = d.textContent);
+    return Object.assign(props, { longitud: c[0], latitud: c[1] });
+  });
+}
+async function parseShpZip(buf){
+  const zip = await JSZip.loadAsync(buf);
+  const f = ext => Object.values(zip.files).find(x => x.name.toLowerCase().endsWith(ext));
+  const shp = f(".shp"), dbf = f(".dbf"), prj = f(".prj");
+  if (!shp || !dbf) throw new Error("El .zip debe contener al menos .shp y .dbf.");
+  if (prj){ const p = await prj.async("string"); if (/PROJCS/i.test(p)) throw new Error("El shapefile está en coordenadas proyectadas. Expórtelo en WGS84 (EPSG:4326)."); }
+  const sb = new DataView(await shp.async("arraybuffer")), db = new DataView(await dbf.async("arraybuffer"));
+  const pts = []; let o = 100;
+  while (o + 8 < sb.byteLength){ const len = sb.getInt32(o + 4) * 2, type = sb.getInt32(o + 8, true);
+    if ([1, 11, 21].includes(type)) pts.push([sb.getFloat64(o + 12, true), sb.getFloat64(o + 20, true)]); else pts.push(null);
+    o += 8 + len; }
+  const n = db.getUint32(4, true), hl = db.getUint16(8, true), rl = db.getUint16(10, true), dec = new TextDecoder("utf-8");
+  const fields = []; for (let p = 32; p < hl - 1; p += 32){ const nm = dec.decode(new Uint8Array(db.buffer, p, 11)).replace(/\0.*$/, ""); fields.push([nm, db.getUint8(p + 16)]); }
+  const rows = [];
+  for (let i = 0; i < n; i++){ let p = hl + i * rl + 1; const r = {}; for (const [nm, L] of fields){ r[nm] = dec.decode(new Uint8Array(db.buffer, p, L)).trim(); p += L; }
+    const pt = pts[i]; if (pt){ r.longitud = pt[0]; r.latitud = pt[1]; } rows.push(r); }
+  return rows;
+}
+async function loadBulk(raws){
+  if (!raws.length){ toast("No se encontraron filas."); return; }
+  if (raws.length > 200){ toast("Máximo 200 ubicaciones por carga en el demo."); raws = raws.slice(0, 200); }
+  let auto = nextId();
+  for (const r of raws){ if (r.id === "" || r.id === undefined || r.id === null) r.id = auto++; }
+  toast(`Ubicando ${raws.length} puntos…`, 2500);
+  for (let i = 0; i < raws.length; i += 6) await Promise.all(raws.slice(i, i + 6).map(addLocation));
+  const st = S.locs.reduce((a, l) => (a[l.status] = (a[l.status] || 0) + 1, a), {});
+  toast(`Carga lista: ${st.ok || 0} ubicados, ${st.warn || 0} con aviso, ${st.err || 0} con error.`, 6000);
+}
+$("#mGo").onclick = async () => {
+  try {
+    const file = $("#mFile").files[0];
+    let rows = [];
+    if (file){
+      const n = file.name.toLowerCase();
+      if (n.endsWith(".xlsx") || n.endsWith(".xls")){ const wb = XLSX.read(await file.arrayBuffer()); rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { raw: false }); }
+      else if (n.endsWith(".csv") || n.endsWith(".txt")) rows = parseDelimited(await file.text());
+      else if (n.endsWith(".geojson") || n.endsWith(".json")){ const g = JSON.parse(await file.text()); rows = (g.features || []).filter(f => f.geometry?.type === "Point").map(f => Object.assign({}, f.properties, { longitud: f.geometry.coordinates[0], latitud: f.geometry.coordinates[1] })); }
+      else if (n.endsWith(".kml")) rows = parseKML(await file.text());
+      else if (n.endsWith(".zip")) rows = await parseShpZip(await file.arrayBuffer());
+      else throw new Error("Formato no soportado.");
+    } else if ($("#mText").value.trim()) rows = parseDelimited($("#mText").value);
+    else { toast("Elige un archivo o pega filas."); return; }
+    await loadBulk(rowsToRaw(rows));
+  } catch(e){ toast("No se pudo leer el archivo: " + e.message, 8000); }
+};
+$("#mTpl").onclick = () => {
+  const csv = "id_punto;latitud;longitud;sentido\n101;-33.44455;-70.65293;oeste\n102;-33.45660;-70.86510;270\n103;-33.39650;-70.57000;este\n";
+  download(new Blob(["﻿" + csv], { type: "text/csv" }), "plantilla_consulta_masiva.csv");
+};
+
+/* ============================================================
+   PERÍODO Y TRAMOS HORARIOS (Funcionalidad 2)
+   ============================================================ */
+function renderMonths(){
+  let h = "";
+  for (let y = FIRST.y; y <= LAST.y; y++){
+    h += `<div class="yr"><b data-y="${y}" title="Seleccionar año completo">${y}</b>` + MESES.map((m, i) => `<button data-k="${mKey(y, i)}" ${inRange(y, i) ? "" : "disabled"} class="${S.months.has(mKey(y, i)) ? "on" : ""}">${m}</button>`).join("") + "</div>";
+  }
+  $("#months").innerHTML = h;
+  $$("#months button").forEach(b => b.onclick = () => { S.months.has(b.dataset.k) ? S.months.delete(b.dataset.k) : S.months.add(b.dataset.k); renderMonths(); });
+  $$("#months b").forEach(b => b.onclick = () => { const y = +b.dataset.y; const ks = MESES.map((_, i) => mKey(y, i)).filter((k, i) => inRange(y, i)); const all = ks.every(k => S.months.has(k)); ks.forEach(k => all ? S.months.delete(k) : S.months.add(k)); renderMonths(); });
+  updateEstimate();
+}
+$$(".quick [data-q]").forEach(b => b.onclick = () => {
+  const q = b.dataset.q;
+  if (q === "clear") S.months.clear();
+  if (q === "last"){ S.months.clear(); S.months.add(mKey(LAST.y, LAST.m)); }
+  if (q === "last3"){ S.months.clear(); for (let i = 0; i < 3; i++){ const d = new Date(LAST.y, LAST.m - i, 1); S.months.add(mKey(d.getFullYear(), d.getMonth())); } }
+  if (q === "2025"){ S.months.clear(); for (let i = 0; i < 12; i++) S.months.add(mKey(2025, i)); }
+  renderMonths();
+});
+function hourBins(){
+  if ($("#hMode").value === "fixed"){
+    const d = parseInt($("#hDur").value, 10);
+    if (!(d >= 1 && d <= 24)) return { err: "La duración del tramo horario debe estar entre 1 y 24 horas." };
+    const out = []; for (let h = 0; h < 24; h += d) out.push([h, Math.min(24, h + d)]);
+    return { bins: out };
+  }
+  const parts = $("#hCustom").value.split(",").map(s => s.trim()).filter(Boolean);
+  const out = [];
+  for (const p of parts){
+    const m = p.match(/^(\d{1,2})(?::00)?\s*-\s*(\d{1,2})(?::00)?$/);
+    if (!m) return { err: `Rango horario inválido: "${p}". Use el formato hh-hh, por ejemplo 06-10.` };
+    const a = +m[1], b = +m[2];
+    if (a < 0 || b > 24 || b <= a) return { err: `Rango "${p}": la hora final debe ser mayor que la inicial y estar entre 0 y 24.` };
+    out.push([a, b]);
+  }
+  out.sort((x, y) => x[0] - y[0]);
+  for (let i = 1; i < out.length; i++) if (out[i][0] < out[i - 1][1]) return { err: "Los rangos horarios se superponen." };
+  if (!out.length) return { err: "Defina al menos un rango horario." };
+  return { bins: out };
+}
+const hbLabel = ([a, b]) => `${pad(a)}:00 - ${b === 24 ? "24:00" : pad(b) + ":00"}`;
+function renderHours(){
+  $("#hFixedBox").style.display = $("#hMode").value === "fixed" ? "" : "none";
+  $("#hCustomBox").style.display = $("#hMode").value === "custom" ? "" : "none";
+  const r = hourBins();
+  $("#hPreview").innerHTML = r.err ? `<span style="color:var(--bad)">${esc(r.err)}</span>` : `${r.bins.length} tramo(s) horario(s): ${r.bins.slice(0, 6).map(hbLabel).join(", ")}${r.bins.length > 6 ? "…" : ""}`;
+  updateEstimate();
+}
+["#hMode", "#hDur", "#hCustom"].forEach(s => $(s).addEventListener("input", renderHours));
+
+/* ============================================================
+   TRAMOS DE EXCESO (Funcionalidad 3)
+   ============================================================ */
+const REF_BINS = [[null, 0], [1, 5], [6, 10], [11, 20], [21, 60], [61, null]];
+function binLabel([lo, hi]){
+  if (lo === null && hi === 0) return "≤ límite";
+  if (lo === null) return hi < 0 ? `≤ ${-hi} km/h bajo el límite` : `≤ límite + ${hi} km/h`;
+  if (hi === null) return lo > 0 ? `Exceso > ${lo - 1} km/h` : `≥ límite ${lo >= 0 ? "+" : "−"} ${Math.abs(lo)} km/h`;
+  if (lo > 0) return `Exceso ${lo} a ${hi} km/h`;
+  if (hi < 0) return `${-lo} a ${-hi} km/h bajo el límite`;
+  return `Límite ${lo} a +${hi} km/h`;
+}
+function renderBins(){
+  $("#bins tbody").innerHTML = S.bins.map((b, i) => `<tr data-i="${i}"><td><input type="number" step="1" value="${b[0] ?? ""}" placeholder="sin mín."></td><td><input type="number" step="1" value="${b[1] ?? ""}" placeholder="sin máx."></td><td>${esc(binLabel(b))}</td><td><button class="rm" title="Quitar">×</button></td></tr>`).join("");
+  $$("#bins tbody tr").forEach(tr => {
+    const i = +tr.dataset.i, [a, b] = tr.querySelectorAll("input");
+    const upd = () => { S.bins[i] = [a.value === "" ? null : Math.round(+a.value), b.value === "" ? null : Math.round(+b.value)]; renderBins(); };
+    a.onchange = upd; b.onchange = upd;
+    tr.querySelector(".rm").onclick = () => { S.bins.splice(i, 1); renderBins(); };
+  });
+  updateEstimate();
+}
+function validateBins(){
+  if (!S.bins.length) return "Defina al menos un tramo de exceso.";
+  const bs = S.bins.map(b => [b[0] ?? -1e9, b[1] ?? 1e9]);
+  for (const [lo, hi] of bs) if (lo > hi) return "En cada tramo de exceso, 'Desde' debe ser menor o igual que 'Hasta'.";
+  const sorted = bs.slice().sort((x, y) => x[0] - y[0]);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i][0] <= sorted[i - 1][1]) return "Los tramos de exceso se superponen. Ajuste los límites.";
+  return null;
+}
+$("#binAdd").onclick = () => { const last = S.bins[S.bins.length - 1]; S.bins.push(last && last[1] !== null ? [last[1] + 1, last[1] + 10] : [null, null]); renderBins(); };
+$("#binRef").onclick = () => { S.bins = REF_BINS.map(b => b.slice()); renderBins(); };
+
+/* ============================================================
+   MOTOR DE GENERACIÓN
+   ============================================================ */
+function daysOf(key){ const [y, m] = key.split("-").map(Number); const n = new Date(Date.UTC(y, m, 0)).getUTCDate(); return [...Array(n).keys()].map(d => new Date(Date.UTC(y, m - 1, d + 1))); }
+function buildQuery(){
+  const hb = hourBins();
+  const errs = [];
+  const locs = S.locs.filter(l => l.status === "ok" || l.status === "warn");
+  if (!locs.length) errs.push("No hay ubicaciones válidas para consultar.");
+  const sinLim = locs.filter(l => !l.lim);
+  if (sinLim.length) errs.push(`Falta el límite de velocidad en ID ${sinLim.map(l => l.id).join(", ")}: ingréselo manualmente.`);
+  if (!S.months.size) errs.push("Seleccione al menos un mes.");
+  if (hb.err) errs.push(hb.err);
+  const be = validateBins(); if (be) errs.push(be);
+  const fmts = $$("#fmts input:checked").map(i => i.value);
+  if (!fmts.length) errs.push("Elija al menos un formato de descarga.");
+  const months = [...S.months].sort();
+  const days = months.reduce((a, k) => a + daysOf(k).length, 0);
+  const rows = locs.length * days * (hb.bins?.length || 0);
+  return { errs, q: { locs: locs.map(l => ({ id: l.id, lat: l.lat, lon: l.lon, rumbo: l.rumbo, lim: l.lim, tramo: Object.assign({}, l.tramo, { paths: null }) })),
+    months, hours: hb.bins, bins: S.bins.map(b => b.slice()), fmts, lanes: $("#oLanes").checked, types: $("#oTypes").checked, mail: $("#oMail").value.trim() }, rows,
+    excluded: S.locs.filter(l => l.status === "err").length };
+}
+const RAPIDA = 100000, MAXROWS = 1000000;
+function updateEstimate(){
+  if (!$("#est")) return;
+  const { errs, rows, excluded } = buildQuery();
+  const secs = Math.max(1, Math.round(rows / 60000));
+  let h = rows ? `<b>${nf(rows)}</b> registros estimados. ` : "";
+  if (rows > MAXROWS) h += `<span style="color:var(--bad)">Supera el máximo de ${nf(MAXROWS)} por archivo del demo: divida la consulta.</span>`;
+  else if (rows > RAPIDA) h += `<b>Consulta masiva</b>: el archivo tomará ~${secs} s en este navegador. En el servicio productivo se procesa en servidor (de horas a un día) y se avisa por correo.`;
+  else if (rows) h += `<b>Consulta rápida</b>: el archivo se genera en línea (~${secs} s).`;
+  if (excluded) h += `<br><span style="color:var(--warn)">${excluded} ubicación(es) con error quedarán fuera.</span>`;
+  if (errs.length) h += `<br><span style="color:var(--bad)">${errs.map(esc).join("<br>")}</span>`;
+  $("#est").innerHTML = h || "Completa los pasos para estimar la consulta.";
+  $("#go").disabled = !!errs.length || rows > MAXROWS;
+}
+
+function locModel(L){ return Object.assign({}, L, { m: prepModel(L.tramo) }); }
+function binProbs(mu, sd, lim, bins){
+  return bins.map(([lo, hi]) => {
+    const a = lo === null ? -Infinity : (lim + lo - 0.5 - mu) / sd, b = hi === null ? Infinity : (lim + hi + 0.5 - mu) / sd;
+    return Math.max(0, Phi(b) - Phi(a));
+  });
+}
+function roundTo(vals, total){
+  const fl = vals.map(Math.floor); let rest = total - fl.reduce((a, b) => a + b, 0);
+  const ord = vals.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]);
+  for (let k = 0; k < ord.length && rest > 0; k++, rest--) fl[ord[k][1]]++;
+  return fl;
+}
+/* Genera las filas de una ubicación para un día y sus tramos horarios */
+function rowsFor(L, date, q){
+  const t = L.tramo, m = L.m, y = date.getUTCFullYear(), mo = date.getUTCMonth(), dow = date.getUTCDay(), we = dow === 0 || dow === 6;
+  const r = rng(hashStr(`${t.id_tramo}|${y}${mo}${date.getUTCDate()}`));
+  const dayK = 0.92 + 0.16 * r(), spdK = 0.98 + 0.04 * r();
+  const Q = (we ? m.qFds : m.qLab) * MONTH_F[mo] * (YEAR_F[y] || 1) * dayK;
+  const prof = we ? t.vf : t.vl, W = we ? W_FDS : W_LAB;
+  const nb = q.bins.length, out = [];
+  for (const [h0, h1] of q.hours){
+    const exp = TYPES.map(() => new Array(nb).fill(0));
+    for (let h = h0; h < h1; h++){
+      const N = Q * W[h], base = (prof[h] || prof.find(v => v) || 30) * spdK * (mo === 1 ? 1.03 : 1);
+      TYPES.forEach((ty, k) => {
+        const mu = Math.max(3, base + ty.off), sd = Math.max(3, m.cv * mu), p = binProbs(mu, sd, L.lim, q.bins), n = N * m.shares[k];
+        for (let b = 0; b < nb; b++) exp[k][b] += n * p[b];
+      });
+    }
+    const byType = exp.map(e => roundTo(e, Math.round(e.reduce((a, b) => a + b, 0))));
+    const comb = q.bins.map((_, b) => byType.reduce((a, tArr) => a + tArr[b], 0));
+    out.push({ fecha: `${pad(date.getUTCDate())}-${pad(mo + 1)}-${y}`, horario: hbLabel([h0, h1]), counts: comb, total: comb.reduce((a, b) => a + b, 0), byType, dow, h0, h1 });
+  }
+  return out;
+}
+function* iterRows(q){
+  const locs = q.locs.map(locModel);
+  for (const L of locs) for (const k of q.months) for (const d of daysOf(k)) for (const r of rowsFor(L, d, q)) yield [L, r];
+}
+function header(q){
+  const h = ["ID Punto", "Sentido", "Latitud", "Longitud", "Ruta o vía", "Fecha", "Tramo horario", "Límite máximo de velocidad (km/h)"];
+  q.bins.forEach((b, i) => h.push(`Conteo de vehículos - Tramo exceso velocidad ${i + 1} (${binLabel(b)})`));
+  h.push("Total de vehículos");
+  if (q.lanes) h.push("Cantidad de pistas");
+  if (q.types) TYPES.forEach(ty => q.bins.forEach((b, i) => h.push(`${ty.n} - Tramo ${i + 1} (${binLabel(b)})`)));
+  h.push("ID tramo", "Comuna", "Región", "Fuente del tramo");
+  return h;
+}
+function rowValues(L, r, q){
+  const t = L.tramo, v = [L.id, t.sentido, +L.lat.toFixed(6), +L.lon.toFixed(6), t.ruta ? `${t.nombre} (Ruta ${t.ruta})` : t.nombre, r.fecha, r.horario, L.lim, ...r.counts, r.total];
+  if (q.lanes) v.push(t.pistas ?? "");
+  if (q.types) r.byType.forEach(arr => v.push(...arr));
+  v.push(t.id_tramo, t.comuna || "", t.region || "", t.fuente);
+  return v;
+}
+
+/* ---------- escritores (Funcionalidad 4) ---------- */
+function download(blob, name){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+const csvCell = v => { const s = String(v ?? ""); return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+const xmlEsc = s => String(s ?? "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+
+async function build(q, meta, onProg){
+  const head = header(q), rows = [], total = meta.rows;
+  let n = 0;
+  for (const [L, r] of iterRows(q)){
+    rows.push([L, r, rowValues(L, r, q)]);
+    if (++n % 20000 === 0){ onProg && onProg(n / total * 0.7); await new Promise(res => setTimeout(res, 0)); }
+  }
+  const files = [];
+  const base = `CONASET_ExcesoVel_${meta.id}_${meta.stamp}`;
+  for (const f of q.fmts){
+    if (f === "csv") files.push([new Blob(["﻿" + [head, ...rows.map(x => x[2])].map(r => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }), base + ".csv"]);
+    if (f === "xlsx"){
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([head, ...rows.map(x => x[2])]);
+      ws["!cols"] = head.map((h, i) => ({ wch: i < 8 ? 16 : 14 }));
+      XLSX.utils.book_append_sheet(wb, ws, "Datos");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(metaRows(q, meta)), "Parámetros");
+      files.push([new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), base + ".xlsx"]);
+    }
+    if (f === "geojson"){
+      const fc = { type: "FeatureCollection", name: base, features: rows.map(([L, r, v]) => ({ type: "Feature", geometry: { type: "Point", coordinates: [+L.lon.toFixed(6), +L.lat.toFixed(6)] }, properties: Object.fromEntries(head.map((h, i) => [h, v[i]])) })) };
+      files.push([new Blob([JSON.stringify(fc)], { type: "application/geo+json" }), base + ".geojson"]);
+    }
+    if (f === "kml"){
+      const byLoc = {};
+      rows.forEach(([L, r, v]) => (byLoc[L.id] = byLoc[L.id] || []).push([L, v]));
+      const pm = Object.values(byLoc).map(arr => `<Folder><name>ID punto ${xmlEsc(arr[0][0].id)} · ${xmlEsc(arr[0][0].tramo.nombre)}</name>` + arr.map(([L, v]) =>
+        `<Placemark><name>${xmlEsc(v[0] + " · " + v[5] + " · " + v[6])}</name><ExtendedData>${head.map((h, i) => `<Data name="${xmlEsc(h)}"><value>${xmlEsc(v[i])}</value></Data>`).join("")}</ExtendedData><Point><coordinates>${L.lon},${L.lat},0</coordinates></Point></Placemark>`).join("") + "</Folder>").join("");
+      files.push([new Blob([`<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${base}</name>${pm}</Document></kml>`], { type: "application/vnd.google-earth.kml+xml" }), base + ".kml"]);
+    }
+    if (f === "shp") files.push([await writeShp(head, rows, q, base), base + "_SHP.zip"]);
+  }
+  onProg && onProg(1);
+  return { files, rows };
+}
+function metaRows(q, meta){
+  return [["Parámetro", "Valor"], ["ID de archivo", meta.id], ["Generado", meta.when], ["Ubicaciones", q.locs.map(l => l.id).join(", ")],
+    ["Meses", q.months.join(", ")], ["Tramos horarios", q.hours.map(hbLabel).join(", ")], ["Tramos de exceso", q.bins.map(binLabel).join(" | ")],
+    ["Límites aplicados", q.locs.map(l => `${l.id}: ${l.lim} km/h${l.tramo.limite && l.tramo.limite !== l.lim ? " (registrado " + l.tramo.limite + ")" : ""}`).join("; ")],
+    ["Registros", meta.rows], ["Nota", "Demo: conteos simulados a partir de patrones históricos de velocidad HERE. En el servicio: HERE Traffic Analytics."]];
+}
+async function writeShp(head, rows, q, base){
+  const n = rows.length, enc = new TextEncoder();
+  const short = ["ID_PUNTO", "SENTIDO", "LATITUD", "LONGITUD", "RUTA_VIA", "FECHA", "T_HORARIO", "LIM_KMH"];
+  q.bins.forEach((_, i) => short.push(`EXC_${i + 1}`)); short.push("TOTAL");
+  if (q.lanes) short.push("PISTAS");
+  if (q.types) ["LIV", "BUS", "CAM"].forEach(p => q.bins.forEach((_, i) => short.push(`${p}_${i + 1}`)));
+  short.push("ID_TRAMO", "COMUNA", "REGION", "FUENTE");
+  const types = head.map((h, i) => (i === 0 || i === 7 || (i >= 8 && i < 8 + q.bins.length + 1) || h === "Cantidad de pistas" || /^(Livianos|Buses|Camiones)/.test(h)) ? ["N", 12, 0] : (i === 2 || i === 3) ? ["N", 14, 6] : ["C", 100, 0]);
+  // .shp / .shx
+  const shp = new DataView(new ArrayBuffer(100 + n * 28)), shx = new DataView(new ArrayBuffer(100 + n * 8));
+  let xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -Infinity;
+  rows.forEach(([L]) => { xmin = Math.min(xmin, L.lon); xmax = Math.max(xmax, L.lon); ymin = Math.min(ymin, L.lat); ymax = Math.max(ymax, L.lat); });
+  for (const [dv, len] of [[shp, 50 + n * 14], [shx, 50 + n * 4]]){
+    dv.setInt32(0, 9994); dv.setInt32(24, len); dv.setInt32(28, 1000, true); dv.setInt32(32, 1, true);
+    [xmin, ymin, xmax, ymax].forEach((v, i) => dv.setFloat64(36 + i * 8, n ? v : 0, true));
+  }
+  rows.forEach(([L], i) => {
+    const o = 100 + i * 28; shp.setInt32(o, i + 1); shp.setInt32(o + 4, 10); shp.setInt32(o + 8, 1, true); shp.setFloat64(o + 12, L.lon, true); shp.setFloat64(o + 20, L.lat, true);
+    shx.setInt32(100 + i * 8, (100 + i * 28) / 2); shx.setInt32(100 + i * 8 + 4, 10);
+  });
+  // .dbf
+  const nf_ = short.length, hl = 32 + nf_ * 32 + 1, rl = 1 + types.reduce((a, t) => a + t[1], 0);
+  const dbf = new Uint8Array(hl + n * rl + 1), dv = new DataView(dbf.buffer), d = new Date();
+  dbf[0] = 3; dbf[1] = d.getFullYear() - 1900; dbf[2] = d.getMonth() + 1; dbf[3] = d.getDate();
+  dv.setUint32(4, n, true); dv.setUint16(8, hl, true); dv.setUint16(10, rl, true); dbf[29] = 0;
+  short.forEach((nm, i) => { const p = 32 + i * 32; enc.encode(nm.slice(0, 10)).forEach((b, k) => dbf[p + k] = b); dbf[p + 11] = types[i][0].charCodeAt(0); dbf[p + 16] = types[i][1]; dbf[p + 17] = types[i][2]; });
+  dbf[hl - 1] = 0x0D;
+  rows.forEach(([, , v], r) => {
+    let p = hl + r * rl; dbf[p++] = 0x20;
+    v.forEach((val, i) => {
+      const [t, L, dec] = types[i];
+      let s = val === "" || val === null || val === undefined ? "" : t === "N" ? Number(val).toFixed(dec) : String(val);
+      let bytes = enc.encode(s);
+      if (bytes.length > L){ while (enc.encode(s).length > L) s = s.slice(0, -1); bytes = enc.encode(s); }
+      const padN = L - bytes.length;
+      if (t === "N"){ dbf.fill(0x20, p, p + padN); dbf.set(bytes, p + padN); } else { dbf.set(bytes, p); dbf.fill(0x20, p + bytes.length, p + L); }
+      p += L;
+    });
+  });
+  dbf[dbf.length - 1] = 0x1A;
+  const zip = new JSZip();
+  zip.file(base + ".shp", shp.buffer); zip.file(base + ".shx", shx.buffer); zip.file(base + ".dbf", dbf);
+  zip.file(base + ".prj", 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]');
+  zip.file(base + ".cpg", "UTF-8");
+  zip.file(base + "_campos.txt", "﻿" + short.map((s, i) => `${s}\t${head[i]}`).join("\r\n"));
+  return await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+}
+
+/* ---------- historial (Funcionalidad 9) ---------- */
+const HKEY = "conaset_demo_historial_v1";
+function histLoad(){ try { const a = JSON.parse(localStorage.getItem(HKEY) || "[]"); const now = Date.now(); return a.filter(e => e.expira > now); } catch(e){ return []; } }
+function histSave(a){ try { localStorage.setItem(HKEY, JSON.stringify(a)); } catch(e){ toast("No se pudo guardar el historial en este navegador (almacenamiento lleno o bloqueado)."); } }
+function renderHist(){
+  const a = histLoad();
+  $("#bHist").innerHTML = (a.length ? `<table class="hist"><thead><tr><th>ID archivo</th><th>Generado</th><th>Consulta</th><th>Registros</th><th>Disponible hasta</th><th></th></tr></thead><tbody>${a.map((e, i) => `<tr>
+    <td><code>${esc(e.id)}</code></td><td>${esc(e.when)}</td>
+    <td>${e.q.locs.length} ubicación(es) · ${e.q.months.length} mes(es) · ${e.q.hours.length} tramo(s) horario(s) · ${e.q.bins.length} tramo(s) de exceso<br><span style="color:var(--muted)">${e.q.fmts.map(f => f.toUpperCase()).join(", ")}${e.q.types ? " · por tipo de vehículo" : ""}${e.q.lanes ? " · con pistas" : ""}</span></td>
+    <td>${nf(e.rows)}</td><td>${new Date(e.expira).toLocaleDateString("es-CL")}</td>
+    <td style="white-space:nowrap"><button class="btn sm" data-r="${i}">Re-descargar</button> <button class="btn sec sm" data-d="${i}">Eliminar</button></td></tr>`).join("")}</tbody></table>`
+    : `<div class="empty">Todavía no se han generado archivos.</div>`) +
+    `<p class="hint">Los archivos quedan disponibles por un año. En el demo el historial se guarda en este navegador; en el servicio productivo se guarda en la plataforma para todos los usuarios autorizados de la Subsecretaría.</p>`;
+  $$("#bHist [data-r]").forEach(b => b.onclick = () => { const e = histLoad()[+b.dataset.r]; runQuery(e.q, e); });
+  $$("#bHist [data-d]").forEach(b => b.onclick = () => { const all = histLoad(); const e = all[+b.dataset.d]; if (confirmDelete(e)) { all.splice(+b.dataset.d, 1); histSave(all); renderHist(); toast("Archivo " + e.id + " eliminado del historial.", 3000); } });
+}
+function confirmDelete(e){ return true; }
+
+/* ---------- ejecución (Funcionalidades 7 y 8) ---------- */
+function modal(title, body, actions = [], prog = false){
+  $("#mdT").textContent = title; $("#mdB").innerHTML = body; $("#mdP").hidden = !prog; $("#mdP div").style.width = "0";
+  $("#mdA").innerHTML = ""; actions.forEach(([txt, fn, sec]) => { const b = document.createElement("button"); b.className = "btn" + (sec ? " sec" : ""); b.textContent = txt; b.onclick = fn; $("#mdA").appendChild(b); });
+  $("#modal").hidden = false;
+}
+const closeModal = () => { $("#modal").hidden = true; };
+function newId(){ const a = new Uint8Array(6); crypto.getRandomValues(a); return [...a].map(b => b.toString(36).padStart(2, "0")).join("").slice(0, 10).toUpperCase(); }
+async function runQuery(q, prev){
+  const now = new Date();
+  const meta = prev ? { id: prev.id, when: prev.when, stamp: prev.stamp, rows: prev.rows } :
+    { id: newId(), when: now.toLocaleString("es-CL"), stamp: `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`,
+      rows: q.locs.length * q.months.reduce((a, k) => a + daysOf(k).length, 0) * q.hours.length };
+  const masiva = meta.rows > RAPIDA;
+  if (masiva && !prev){
+    const go = await new Promise(res => modal("Consulta masiva", `<p>Esta consulta tiene <b>${nf(meta.rows)}</b> registros. En el servicio productivo se procesa en el servidor (puede tomar de unas horas a un día) y se avisa por correo${q.mail ? " a <b>" + esc(q.mail) + "</b>" : ""} cuando el archivo está listo.</p><p>En este demo se procesa en su navegador: tardará aproximadamente <b>${Math.max(1, Math.round(meta.rows / 60000))} s</b>.</p>`,
+      [["Cancelar", () => { closeModal(); res(false); }, true], ["Procesar", () => res(true)]]));
+    if (!go) return;
+  }
+  modal(prev ? "Regenerando archivo" : "Generando archivo", `<p>ID <code>${meta.id}</code> · ${nf(meta.rows)} registros</p>`, [], true);
+  try {
+    const { files, rows } = await build(q, meta, p => $("#mdP div").style.width = Math.round(p * 100) + "%");
+    files.forEach(([b, n], i) => setTimeout(() => download(b, n), i * 400));
+    if (!prev){
+      const all = histLoad(); all.unshift({ id: meta.id, when: meta.when, stamp: meta.stamp, rows: meta.rows, expira: Date.now() + 365 * 864e5, q }); histSave(all.slice(0, 200));
+    }
+    renderHist(); renderSummary(q, rows); renderPreview(q, rows);
+    S.last = { q, meta };
+    modal("Archivo listo", `<p>${files.map(([b, n]) => `<code>${esc(n)}</code> · ${(b.size / 1024).toLocaleString("es-CL", { maximumFractionDigits: 0 })} KB`).join("<br>")}</p>${masiva && q.mail ? `<p>Notificación enviada a <b>${esc(q.mail)}</b> <span style="color:var(--muted)">(simulada en el demo)</span>.</p>` : ""}<p class="hint">También queda en <b>Historial de archivos</b> por un año.</p>`, [["Cerrar", closeModal]]);
+  } catch(e){
+    modal("No se pudo generar el archivo", `<p>${esc(e.message)}</p>`, [["Cerrar", closeModal]]);
+  }
+}
+$("#go").onclick = () => { const { errs, q } = buildQuery(); if (errs.length){ toast(errs[0], 7000); return; } runQuery(q); };
+
+/* ---------- resumen y vista previa ---------- */
+const BIN_COLORS = ["#1a9850", "#a6d96a", "#fee08b", "#fdae61", "#f46d43", "#d73027", "#a50026", "#67001f"];
+function renderSummary(q, rows){
+  const byLoc = new Map();
+  for (const [L, r] of rows){ let s = byLoc.get(L.id); if (!s) byLoc.set(L.id, s = { L, counts: new Array(q.bins.length).fill(0), total: 0, hourly: new Array(24).fill(0) }); r.counts.forEach((c, i) => s.counts[i] += c); s.total += r.total; }
+  $("#bSum").innerHTML = `<div class="cards">${[...byLoc.values()].map(s => {
+    const L = s.L, t = L.tramo, over = q.bins.reduce((a, b, i) => a + ((b[0] ?? -1e9) >= 1 ? s.counts[i] : 0), 0), max = Math.max(...s.counts, 1);
+    const st = speedStats(L, q);
+    return `<div class="card"><h4>ID ${esc(L.id)} · ${esc(t.nombre)}</h4><div class="sub">${esc(t.sentido)} · tramo ${esc(t.id_tramo)} · límite aplicado ${L.lim} km/h${t.pistas ? " · " + t.pistas + " pista(s)" : ""}</div>${t.sin != null ? `<div class="sub" style="margin-top:4px">Siniestros 2020-2025 (CONASET): <b>${nf(t.sin)}</b> · fallecidos ${nf(t.sinFall || 0)} · por velocidad ${nf(t.sinVel || 0)}${t.prio ? ` · prioridad de fiscalización <b>${esc(t.prio.toLowerCase())}</b> (${nf(t.iprio || 0)}/100)` : ""}</div>` : ""}
+      <div class="kp"><div><b>${nf(s.total)}</b><span>vehículos</span></div><div><b>${s.total ? nf(over / s.total * 100, 1) : 0}%</b><span>sobre el límite</span></div><div><b>${nf(st.mean, 1)}</b><span>vel. media km/h</span></div>
+      <div><b>${nf(st.p50)}</b><span>mediana km/h</span></div><div><b>${nf(st.p85)}</b><span>percentil 85 km/h</span></div><div><b>${nf(st.p95)}</b><span>percentil 95 km/h</span></div></div>
+      <div class="bars">${q.bins.map((b, i) => `<div class="bar"><span>${esc(binLabel(b))}</span><div class="tr"><div class="fill" style="width:${(s.counts[i] / max * 100).toFixed(1)}%;background:${BIN_COLORS[Math.min(i, 7)]}"></div></div><span class="v">${nf(s.counts[i])}</span></div>`).join("")}</div></div>`;
+  }).join("")}</div><p class="hint">Valores del período consultado (${q.months.length} mes(es)). Conteos simulados para el demo sobre patrones históricos HERE.</p>`;
+}
+function speedStats(L, q){
+  const M = locModel(L), t = L.tramo, grid = []; for (let v = 0; v <= 180; v++) grid.push(0);
+  let wsum = 0, msum = 0;
+  [[t.vl, W_LAB, M.m.qLab * 5], [t.vf, W_FDS, M.m.qFds * 2]].forEach(([prof, W, Q]) => {
+    for (let h = 0; h < 24; h++){ const mu = prof[h] || 30, sd = Math.max(3, M.m.cv * mu), w = Q * W[h]; wsum += w; msum += w * mu;
+      for (let v = 0; v <= 180; v++) grid[v] += w * (Phi((v + 0.5 - mu) / sd) - Phi((v - 0.5 - mu) / sd)); }
+  });
+  const tot = grid.reduce((a, b) => a + b, 0); let acc = 0; const qs = {};
+  for (let v = 0; v <= 180; v++){ acc += grid[v] / tot; for (const p of [50, 85, 95]) if (qs[p] === undefined && acc >= p / 100) qs[p] = v; }
+  return { mean: msum / wsum, p50: qs[50], p85: qs[85], p95: qs[95] };
+}
+function renderPreview(q, rows){
+  const head = header(q), show = rows.slice(0, 300);
+  $("#bPrev").innerHTML = `<p class="hint" style="margin-top:0">Primeras ${show.length} de ${nf(rows.length)} filas.</p><table class="prev"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${show.map(([, , v]) => `<tr>${v.map(x => `<td class="${typeof x === "number" ? "num" : ""}">${esc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+$$("#btabs button").forEach(b => b.onclick = () => { $$("#btabs button").forEach(x => x.classList.toggle("on", x === b)); $$(".bpane").forEach(p => p.classList.toggle("on", p.id === b.dataset.b)); });
+
+/* ============================================================
+   MAPA
+   ============================================================ */
+let drawLocs = () => {};
+function startMap(){
+  if (!P.k){ $("#viewWrap").innerHTML = `<div class="empty" style="padding:16px">Mapa no disponible: falta la API key de HERE (#k=…).</div>`; return; }
+  const s = document.createElement("script"); s.src = "https://js.arcgis.com/4.31/";
+  s.onerror = () => { $("#viewWrap").innerHTML = `<div class="empty" style="padding:16px">No se pudo cargar el mapa.</div>`; };
+  s.onload = () => require(["esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/WebTileLayer", "esri/layers/GraphicsLayer", "esri/Graphic", "esri/geometry/Point", "esri/geometry/Polyline"],
+  (Map, MapView, Basemap, WebTileLayer, GraphicsLayer, Graphic, Point, Polyline) => {
+    const key = encodeURIComponent(P.k);
+    const basemap = new Basemap({ baseLayers: [new WebTileLayer({ urlTemplate: `https://maps.hereapi.com/v3/base/mc/{level}/{col}/{row}/png8?size=256&style=lite.day&lang=es&apiKey=${key}`, copyright: "© HERE" })] });
+    const gl = new GraphicsLayer();
+    const view = new MapView({ container: "viewDiv", map: new Map({ basemap, layers: [gl] }), center: [-70.65, -33.45], zoom: 11 });
+    const COL = { ok: "#1a7f37", warn: "#e08a00", err: "#c62828", pend: "#8a99ad" };
+    drawLocs = () => {
+      gl.removeAll();
+      const geoms = [];
+      S.locs.filter(l => isFinite(l.lat) && isFinite(l.lon)).forEach(l => {
+        if (l.tramo?.paths){ const g = new Polyline({ paths: l.tramo.paths, spatialReference: { wkid: 4326 } }); geoms.push(g);
+          gl.add(new Graphic({ geometry: g, symbol: { type: "simple-line", color: [15, 98, 254, .85], width: 6, marker: { style: "arrow", placement: "end", color: [15, 98, 254, 1] } } })); }
+        const p = new Point({ longitude: l.lon, latitude: l.lat }); geoms.push(p);
+        gl.add(new Graphic({ geometry: p, symbol: { type: "simple-marker", size: 14, color: COL[l.status], outline: { color: "#fff", width: 2 } },
+          popupTemplate: { title: `ID punto ${l.id}`, content: esc(l.tramo ? `${l.tramo.nombre} · ${l.tramo.sentido} · límite ${l.lim ?? "—"} km/h` : l.msg) } }));
+        gl.add(new Graphic({ geometry: p, symbol: { type: "text", text: String(l.id ?? ""), color: "#1b2430", haloColor: "#fff", haloSize: 1.5, yoffset: 12, font: { size: 10, weight: "bold" } } }));
+      });
+      if (geoms.length) view.goTo(geoms.length === 1 ? { target: geoms, zoom: 16 } : geoms).catch(() => {});
+    };
+    $("#iPick").onclick = () => { S.pick = !S.pick; $("#iPick").classList.toggle("on", S.pick); $("#iPick").textContent = S.pick ? "Haz clic en el mapa…" : "Elegir en el mapa"; view.container.style.cursor = S.pick ? "crosshair" : ""; };
+    view.on("click", ev => { if (!S.pick) return; $("#iLat").value = ev.mapPoint.latitude.toFixed(6); $("#iLon").value = ev.mapPoint.longitude.toFixed(6); $("#iPick").click(); });
+    drawLocs();
+  });
+  document.head.appendChild(s);
+}
+
+/* ---------- arranque ---------- */
+if (window.top !== window.self){ $("#framed").hidden = false; $("#openTab").onclick = e => { e.preventDefault(); window.open(location.href, "_blank", "noopener"); }; }
+S.bins = REF_BINS.map(b => b.slice());
+S.months.add(mKey(LAST.y, LAST.m));
+renderMonths(); renderHours(); renderBins(); renderLocs(); renderHist(); startMap();
+$("#oLanes").onchange = updateEstimate; $("#oTypes").onchange = updateEstimate; $$("#fmts input").forEach(i => i.onchange = updateEstimate);
+window.__demo = { S, addLocation, buildQuery, runQuery, rowsFor, locModel, build, renderLocs };
+</script>
+</body>
+</html>

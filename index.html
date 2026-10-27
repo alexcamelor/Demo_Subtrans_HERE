@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Geoservicio HERE · Demo</title>
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<style>
+  :root{
+    --bg:#f5f7fa; --panel:#ffffff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea;
+    --accent:#0f62fe; --accent-ink:#ffffff; --ok:#1a9850; --warn:#f7a600; --bad:#d73027;
+    --radius:10px; --shadow:0 2px 10px rgba(16,24,40,.08);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}
+  #app{display:flex;height:100%;width:100%}
+  #panel{width:380px;min-width:320px;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);z-index:2}
+  #viewWrap{position:relative;flex:1;min-width:0}
+  #viewDiv{position:absolute;inset:0}
+  header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  header .t{font-weight:700;font-size:15px;line-height:1.2}
+  header .s{font-size:12px;color:var(--muted)}
+  #busy{margin-left:auto;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;visibility:hidden}
+  #busy.on{visibility:visible}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  nav.tabs{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--line);overflow-x:auto}
+  nav.tabs button{flex:0 0 auto;border:0;background:transparent;padding:7px 8px;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;font-weight:600}
+  nav.tabs button.active{background:#e8f0ff;color:var(--accent)}
+  .tab{display:none;padding:12px 16px 16px;overflow-y:auto;flex:1}
+  .tab.active{display:block}
+  label.f{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+  .row{display:flex;gap:6px;align-items:center}
+  .row > *{flex:1}
+  .field{position:relative}
+  input[type=text],input[type=number],input[type=datetime-local],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
+  input:focus,select:focus{outline:2px solid #b9cfff;border-color:var(--accent)}
+  .pick{flex:0 0 34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;display:grid;place-items:center}
+  .pick.armed{background:#e8f0ff;border-color:var(--accent)}
+  .pick svg{width:16px;height:16px;stroke:var(--ink)}
+  .btn{display:inline-block;width:100%;margin-top:12px;padding:9px 12px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:13px;cursor:pointer}
+  .btn.sec{background:#eef2f6;color:var(--ink)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .chk{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:6px}
+  .chk label{display:flex;gap:6px;align-items:center;cursor:pointer}
+  .sugg{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:10;max-height:260px;overflow:auto}
+  .sugg:empty{display:none}
+  .sugg button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f2f5}
+  .sugg button:hover{background:#f3f7ff}
+  .sugg small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+  .sugg .empty{padding:8px 10px;font-size:12px;color:var(--muted)}
+  .cards{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;cursor:pointer;background:#fff}
+  .card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .card .big{font-size:18px;font-weight:700}
+  .card .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .delay{font-size:12px;font-weight:600}
+  .delay.ok{color:var(--ok)} .delay.warn{color:#b26b00} .delay.bad{color:var(--bad)}
+  ol.steps{padding-left:18px;margin:10px 0 0;font-size:12.5px;line-height:1.45}
+  ol.steps li{margin-bottom:6px}
+  ol.steps small{color:var(--muted)}
+  .legend{margin-top:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+  .legend .it{display:flex;align-items:center;gap:8px}
+  .sw{width:14px;height:14px;border-radius:3px;flex:0 0 14px;border:1px solid rgba(0,0,0,.15)}
+  .swl{width:22px;height:4px;border-radius:2px;flex:0 0 22px}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .kpi{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px}
+  .kpi .v{font-size:18px;font-weight:700}
+  .kpi .l{font-size:11px;color:var(--muted)}
+  table.mx{border-collapse:collapse;width:100%;margin-top:12px;font-size:12px}
+  table.mx th,table.mx td{border:1px solid var(--line);padding:5px 4px;text-align:center}
+  table.mx th{background:#f3f6f9}
+  table.mx td.d{color:#9aa5b1}
+  .plist{margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+  .plist .p{display:flex;gap:6px;align-items:center}
+  .plist .p b{flex:0 0 26px}
+  .plist .p span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .plist .p button{border:0;background:transparent;color:var(--bad);cursor:pointer;font-size:14px}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .chips button:hover{border-color:var(--accent);color:var(--accent)}
+  footer{padding:8px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+  #bmBox{position:absolute;top:12px;right:12px;z-index:3;background:#fff;border-radius:8px;box-shadow:var(--shadow)}
+  #bmBox select{border:0;padding:8px 10px;font-weight:600}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1b2430;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;max-width:min(90vw,520px);box-shadow:var(--shadow);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  #toast.on{opacity:1}
+  #gate{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:100;padding:16px}
+  #gate[hidden]{display:none}
+  #gate .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;max-width:440px;width:100%;box-shadow:var(--shadow)}
+  #gate h2{margin:0 0 6px;font-size:18px}
+  #gate p{font-size:13px;color:var(--muted);line-height:1.45}
+  @media (max-width:760px){
+    #app{flex-direction:column-reverse}
+    #panel{width:100%;min-width:0;height:52%;border-right:0;border-top:1px solid var(--line)}
+    #viewWrap{height:48%;flex:none}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <header>
+      <div>
+        <div class="t" id="appTitle">Geoservicio de Movilidad · HERE</div>
+        <div class="s">Demo de rutas, accesibilidad y tráfico</div>
+      </div>
+      <div id="busy" title="Procesando"></div>
+    </header>
+    <nav class="tabs" id="tabs">
+      <button data-tab="ruta" class="active">Rutas</button>
+      <button data-tab="iso">Isócronas</button>
+      <button data-tab="matriz">Matriz OD</button>
+      <button data-tab="buscar">Búsqueda</button>
+      <button data-tab="trafico">Tráfico</button>
+    </nav>
+
+    <!-- RUTAS -->
+    <section class="tab active" id="tab-ruta">
+      <label class="f">Origen</label>
+      <div class="row"><div class="field"><input type="text" id="rOrigin" placeholder="Dirección, lugar o clic en el mapa" autocomplete="off"></div><button class="pick" data-pick="route.origin" title="Elegir en el mapa"></button></div>
+      <label class="f">Parada intermedia (opcional)</label>
+      <div class="row"><div class="field"><input type="text" id="rVia" placeholder="Opcional" autocomplete="off"></div><button class="pick" data-pick="route.via" title="Elegir en el mapa"></button></div>
+      <label class="f">Destino</label>
+      <div class="row"><div class="field"><input type="text" id="rDest" placeholder="Dirección, lugar o clic en el mapa" autocomplete="off"></div><button class="pick" data-pick="route.destination" title="Elegir en el mapa"></button></div>
+      <div class="row">
+        <div><label class="f">Modo</label>
+          <select id="rMode"><option value="car">Automóvil</option><option value="truck">Camión</option><option value="bus">Bus</option><option value="bicycle">Bicicleta</option><option value="pedestrian">Peatón</option></select></div>
+        <div><label class="f">Salida</label>
+          <select id="rDep" class="dep"><option value="now">Ahora (tráfico en vivo)</option><option value="custom">Fecha y hora…</option><option value="any">Sin tráfico</option></select></div>
+      </div>
+      <input type="datetime-local" id="rDepT" style="display:none;margin-top:6px">
+      <div id="truckBox" style="display:none" class="row">
+        <div><label class="f">Altura (m)</label><input type="number" id="tH" step="0.1" min="0" placeholder="4.0"></div>
+        <div><label class="f">Peso bruto (t)</label><input type="number" id="tW" step="1" min="0" placeholder="30"></div>
+      </div>
+      <label class="f">Evitar</label>
+      <div class="chk">
+        <label><input type="checkbox" name="avoid" value="tollRoad">Peajes</label>
+        <label><input type="checkbox" name="avoid" value="controlledAccessHighway">Autopistas</label>
+        <label><input type="checkbox" name="avoid" value="ferry">Transbordadores</label>
+        <label><input type="checkbox" name="avoid" value="tunnel">Túneles</label>
+      </div>
+      <button class="btn" id="rGo">Calcular ruta</button>
+      <button class="btn sec" id="rClear">Limpiar</button>
+      <div class="cards" id="rCards"></div>
+      <ol class="steps" id="rSteps"></ol>
+    </section>
+
+    <!-- ISOCRONAS -->
+    <section class="tab" id="tab-iso">
+      <label class="f">Punto</label>
+      <div class="row"><div class="field"><input type="text" id="iOrigin" placeholder="Dirección, lugar o clic en el mapa" autocomplete="off"></div><button class="pick" data-pick="iso.origin" title="Elegir en el mapa"></button></div>
+      <div class="row">
+        <div><label class="f">Sentido</label><select id="iDir"><option value="from">Desde el punto</option><option value="to">Hacia el punto</option></select></div>
+        <div><label class="f">Modo</label><select id="iMode"><option value="car">Automóvil</option><option value="truck">Camión</option><option value="bicycle">Bicicleta</option><option value="pedestrian">Peatón</option></select></div>
+      </div>
+      <div class="row">
+        <div><label class="f">Medida</label><select id="iType"><option value="time">Tiempo (min)</option><option value="distance">Distancia (km)</option></select></div>
+        <div><label class="f">Rangos</label><input type="text" id="iVals" value="5,10,15,20"></div>
+      </div>
+      <label class="f">Momento</label>
+      <select id="iDep" class="dep"><option value="now">Ahora (tráfico en vivo)</option><option value="custom">Fecha y hora…</option><option value="any">Sin tráfico</option></select>
+      <input type="datetime-local" id="iDepT" style="display:none;margin-top:6px">
+      <button class="btn" id="iGo">Calcular área de cobertura</button>
+      <button class="btn sec" id="iClear">Limpiar</button>
+      <div class="legend" id="iLegend"></div>
+      <p class="hint">Útil para cobertura de paraderos, tiempos de respuesta de emergencias o accesibilidad a servicios.</p>
+    </section>
+
+    <!-- MATRIZ -->
+    <section class="tab" id="tab-matriz">
+      <label class="f">Agregar punto (máx. 8)</label>
+      <div class="row"><div class="field"><input type="text" id="mAdd" placeholder="Busca o haz clic en el mapa" autocomplete="off"></div></div>
+      <div class="plist" id="mList"></div>
+      <div class="row">
+        <div><label class="f">Modo</label><select id="mMode"><option value="car">Automóvil</option><option value="truck">Camión</option><option value="bicycle">Bicicleta</option><option value="pedestrian">Peatón</option></select></div>
+        <div><label class="f">Salida</label><select id="mDep" class="dep"><option value="now">Ahora</option><option value="custom">Fecha y hora…</option><option value="any">Sin tráfico</option></select></div>
+      </div>
+      <input type="datetime-local" id="mDepT" style="display:none;margin-top:6px">
+      <button class="btn" id="mGo">Calcular matriz origen-destino</button>
+      <button class="btn sec" id="mClear">Limpiar</button>
+      <div id="mOut"></div>
+    </section>
+
+    <!-- BUSQUEDA -->
+    <section class="tab" id="tab-buscar">
+      <label class="f">Dirección o lugar</label>
+      <div class="row"><div class="field"><input type="text" id="sQ" placeholder="Ej: Alameda 1449, Santiago" autocomplete="off"></div></div>
+      <label class="f">Cerca del centro del mapa</label>
+      <div class="chips" id="sChips">
+        <button data-q="hospital">Hospitales</button>
+        <button data-q="estación de servicio">Estaciones de servicio</button>
+        <button data-q="estacionamiento">Estacionamientos</button>
+        <button data-q="estación de metro">Metro</button>
+        <button data-q="paradero">Paraderos</button>
+        <button data-q="colegio">Colegios</button>
+        <button data-q="carabineros">Carabineros</button>
+      </div>
+      <div class="cards" id="sCards"></div>
+      <p class="hint">Haz clic en el mapa para obtener la dirección del punto (geocodificación inversa).</p>
+    </section>
+
+    <!-- TRAFICO -->
+    <section class="tab" id="tab-trafico">
+      <div class="chk" style="flex-direction:column;gap:8px">
+        <label><input type="checkbox" id="tTiles">Capa de flujo de tráfico (teselas HERE)</label>
+        <label><input type="checkbox" id="tFC" checked>Solo vías principales (velocidades)</label>
+        <label><input type="checkbox" id="tAuto">Actualizar cada 60 s</label>
+      </div>
+      <button class="btn" id="tFlow">Cargar velocidades en vivo (vista actual)</button>
+      <button class="btn sec" id="tInc">Cargar incidentes (vista actual)</button>
+      <button class="btn sec" id="tClear">Limpiar</button>
+      <div class="kpis" id="tKpis"></div>
+      <div class="legend">
+        <div class="it"><span class="swl" style="background:#1a9850"></span>Fluido (congestión 0–3)</div>
+        <div class="it"><span class="swl" style="background:#f7c600"></span>Moderado (3–6)</div>
+        <div class="it"><span class="swl" style="background:#f46d43"></span>Lento (6–9)</div>
+        <div class="it"><span class="swl" style="background:#a50026"></span>Detenido (9–10)</div>
+        <div class="it"><span class="swl" style="background:#111"></span>Vía cerrada</div>
+      </div>
+      <p class="hint">Fuente: HERE Traffic API v7 (datos de sondas GPS en tiempo real). Haz clic en un tramo o incidente para ver el detalle.</p>
+    </section>
+
+    <footer>Datos y servicios: HERE Technologies · Mapa: ArcGIS Maps SDK for JavaScript</footer>
+  </aside>
+  <div id="viewWrap">
+    <div id="viewDiv"></div>
+    <div id="bmBox"><select id="bmSel" aria-label="Mapa base"></select></div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="gate" hidden>
+  <div class="box">
+    <h2>Falta la API key de HERE</h2>
+    <p>Esta app lee la key desde la dirección: agrega <code>#k=TU_API_KEY</code> al final de la URL. En Experience Builder, pon la URL completa (con la key) en el widget <b>Insertar</b>.</p>
+    <input type="text" id="gateKey" placeholder="Pega aquí la API key para probar">
+    <button class="btn" id="gateGo">Abrir con esta key</button>
+  </div>
+</div>
+
+<script>
+/* =====================  CONFIGURACIÓN  ===================== */
+const CFG = {
+  center: [-70.6483, -33.4569],   // Santiago de Chile [lng, lat]
+  zoom: 12,
+  country: "CHL",
+  lang: "es",
+  maxMatrixPoints: 8,
+  tiles: {
+    base: "https://maps.hereapi.com/v3/base/mc/{level}/{col}/{row}/{fmt}?size=256&style={style}&lang=es&apiKey={key}",
+    traffic: "https://traffic.maps.hereapi.com/v3/flow/mc/{level}/{col}/{row}/png8?size=256&apiKey={key}"
+  },
+  basemaps: [
+    { style: "explore.day",           label: "HERE Explore · día",   fmt: "png8" },
+    { style: "explore.night",         label: "HERE Explore · noche", fmt: "png8" },
+    { style: "lite.day",              label: "HERE Lite · gris",     fmt: "png8" },
+    { style: "logistics.day",         label: "HERE Logística",       fmt: "png8" },
+    { style: "satellite.day",         label: "HERE Satélite",        fmt: "jpeg" },
+    { style: "explore.satellite.day", label: "HERE Híbrido",         fmt: "jpeg" }
+  ],
+  api: {
+    routes:      "https://router.hereapi.com/v8/routes",
+    isolines:    "https://isoline.router.hereapi.com/v8/isolines",
+    matrix:      "https://matrix.router.hereapi.com/v8/matrix",
+    autosuggest: "https://autosuggest.search.hereapi.com/v1/autosuggest",
+    geocode:     "https://geocode.search.hereapi.com/v1/geocode",
+    revgeocode:  "https://revgeocode.search.hereapi.com/v1/revgeocode",
+    discover:    "https://discover.search.hereapi.com/v1/discover",
+    flow:        "https://data.traffic.hereapi.com/v7/flow",
+    incidents:   "https://data.traffic.hereapi.com/v7/incidents"
+  }
+};
+
+/* =====================  PARÁMETROS DE URL  =====================
+   #k=API_KEY            (obligatorio; también acepta ?k=)
+   &tabs=ruta,iso        (opcional: solo muestra esas pestañas)
+   &tab=trafico          (opcional: pestaña inicial)
+   &lat=-33.45&lng=-70.65&z=12  (opcional: vista inicial)
+   &title=Texto          (opcional: título del encabezado)
+   &bm=explore.night     (opcional: mapa base inicial)              */
+function readParams(){
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const q = new URLSearchParams(location.search);
+  const g = k => h.get(k) ?? q.get(k);
+  return { key: g("k") || g("apiKey"), tabs: g("tabs"), tab: g("tab"),
+           lat: parseFloat(g("lat")), lng: parseFloat(g("lng")), z: parseFloat(g("z")),
+           title: g("title"), bm: g("bm") };
+}
+const P = readParams();
+
+/* =====================  UTILIDADES  ===================== */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let toastT;
+function toast(msg, ms = 4500){ const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms); }
+let busyN = 0;
+function busy(on){ busyN += on ? 1 : -1; $("#busy").classList.toggle("on", busyN > 0); }
+const fmtMin = s => { const m = Math.round(s / 60); return m < 60 ? `${m} min` : `${Math.floor(m/60)} h ${m%60} min`; };
+const fmtKm = m => m < 1000 ? `${Math.round(m)} m` : `${(m/1000).toLocaleString("es-CL",{maximumFractionDigits:1})} km`;
+const ll = p => `${p.lat},${p.lng}`;
+
+/* Decodificador "Flexible Polyline" de HERE (formato abierto) */
+const FP_CH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const FP_T = Object.fromEntries([...FP_CH].map((c, i) => [c, i]));
+function decodeFlex(enc){
+  const u = []; let val = 0, mul = 1;
+  for (const c of enc){
+    const v = FP_T[c]; if (v === undefined) throw new Error("Polilínea inválida");
+    val += (v & 0x1f) * mul;
+    if (v & 0x20) { mul *= 32; } else { u.push(val); val = 0; mul = 1; }
+  }
+  const zz = n => (n % 2 === 1) ? -(n + 1) / 2 : n / 2;
+  const header = u[1];
+  const prec = header & 15, third = (header >> 4) & 7;
+  const f = Math.pow(10, prec);
+  const step = third ? 3 : 2;
+  const pts = []; let lat = 0, lng = 0;
+  for (let i = 2; i + 1 < u.length; i += step){
+    lat += zz(u[i]); lng += zz(u[i + 1]);
+    pts.push([lat / f, lng / f]);
+  }
+  return pts; // [[lat,lng],...]
+}
+
+/* Llamadas a HERE */
+async function parseResp(r){
+  let j = null; try { j = await r.json(); } catch(e) {}
+  if (!r.ok){
+    const m = j && (j.title || j.error_description || j.message || j.cause) || r.statusText;
+    const extra = j && j.cause && j.title ? ` (${j.cause})` : "";
+    throw new Error(`HERE ${r.status}: ${m}${extra}`);
+  }
+  return j;
+}
+async function hereGet(base, params){
+  const u = new URL(base);
+  for (const [k, v] of Object.entries(params || {})) if (v !== undefined && v !== null && v !== "") u.searchParams.set(k, v);
+  u.searchParams.set("apiKey", P.key);
+  busy(true);
+  try { return await parseResp(await fetch(u)); } finally { busy(false); }
+}
+async function herePost(base, query, body){
+  const u = new URL(base);
+  for (const [k, v] of Object.entries(query || {})) u.searchParams.set(k, v);
+  u.searchParams.set("apiKey", P.key);
+  busy(true);
+  try { return await parseResp(await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })); }
+  finally { busy(false); }
+}
+function depParams(prefix, reverse = false){
+  const sel = $(`#${prefix}Dep`).value, key = reverse ? "arrivalTime" : "departureTime";
+  if (sel === "any") return { [key]: "any" };
+  if (sel === "custom"){
+    const v = $(`#${prefix}DepT`).value;
+    if (!v) { toast("Elige fecha y hora o cambia a 'Ahora'."); throw new Error("sin fecha"); }
+    return { [key]: v.length === 16 ? v + ":00" : v };
+  }
+  return {};
+}
+
+/* =====================  ARRANQUE  ===================== */
+if (!P.key){
+  $("#gate").hidden = false;
+  $("#gateGo").onclick = () => { const k = $("#gateKey").value.trim(); if (k){ location.hash = "k=" + encodeURIComponent(k); location.reload(); } };
+} else {
+  const s = document.createElement("script");
+  s.src = "https://js.arcgis.com/4.31/";
+  s.onload = start;
+  s.onerror = () => toast("No se pudo cargar ArcGIS Maps SDK (revisa la conexión).", 10000);
+  document.head.appendChild(s);
+}
+
+function start(){
+require([
+  "esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/WebTileLayer", "esri/layers/GraphicsLayer",
+  "esri/Graphic", "esri/geometry/Polyline", "esri/geometry/Polygon", "esri/geometry/Point",
+  "esri/geometry/geometryEngine", "esri/geometry/support/webMercatorUtils", "esri/widgets/ScaleBar"
+], (Map, MapView, Basemap, WebTileLayer, GraphicsLayer, Graphic, Polyline, Polygon, Point, geometryEngine, webMercatorUtils, ScaleBar) => {
+
+  const KEY = encodeURIComponent(P.key);
+  const tileUrl = (tpl, o) => tpl.replace("{style}", o.style || "").replace("{fmt}", o.fmt || "png8").replace("{key}", KEY);
+  const makeBasemap = o => new Basemap({
+    id: o.style, title: o.label,
+    baseLayers: [ new WebTileLayer({ urlTemplate: tileUrl(CFG.tiles.base, o), copyright: "© HERE " + new Date().getFullYear() }) ]
+  });
+
+  /* ---- Mapa ---- */
+  const bmSel = $("#bmSel");
+  CFG.basemaps.forEach(b => bmSel.insertAdjacentHTML("beforeend", `<option value="${b.style}">${esc(b.label)}</option>`));
+  const startBm = CFG.basemaps.find(b => b.style === P.bm) || CFG.basemaps[0];
+  bmSel.value = startBm.style;
+
+  const trafficTiles = new WebTileLayer({ urlTemplate: tileUrl(CFG.tiles.traffic, {}), visible: false, opacity: .9, title: "Tráfico HERE" });
+  const isoLayer = new GraphicsLayer({ title: "Isócronas" });
+  const routeLayer = new GraphicsLayer({ title: "Rutas" });
+  const flowLayer = new GraphicsLayer({ title: "Velocidades" });
+  const incLayer = new GraphicsLayer({ title: "Incidentes" });
+  const searchLayer = new GraphicsLayer({ title: "Búsqueda" });
+  const pointLayer = new GraphicsLayer({ title: "Puntos" });
+
+  const map = new Map({ basemap: makeBasemap(startBm), layers: [trafficTiles, isoLayer, flowLayer, routeLayer, incLayer, searchLayer, pointLayer] });
+  const view = new MapView({
+    container: "viewDiv", map,
+    center: isFinite(P.lng) && isFinite(P.lat) ? [P.lng, P.lat] : CFG.center,
+    zoom: isFinite(P.z) ? P.z : CFG.zoom,
+    constraints: { snapToZoom: true, maxZoom: 20 },
+    popup: { dockEnabled: false, dockOptions: { buttonEnabled: false } }
+  });
+  view.ui.add(new ScaleBar({ view, unit: "metric" }), "bottom-right");
+  bmSel.onchange = () => { map.basemap = makeBasemap(CFG.basemaps.find(b => b.style === bmSel.value)); };
+
+  const centerLL = () => ({ lat: view.center.latitude, lng: view.center.longitude });
+  const wgs = { wkid: 4326 };
+
+  /* ---- Pestañas ---- */
+  const S = { tab: "ruta", pick: null, route: { origin: null, via: null, destination: null }, iso: { origin: null }, matrix: [], routes: [], sel: 0 };
+  function showTab(t){
+    S.tab = t;
+    $$("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === t));
+    $$(".tab").forEach(s => s.classList.toggle("active", s.id === "tab-" + t));
+  }
+  $$("#tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  if (P.tabs){
+    const keep = P.tabs.split(",").map(s => s.trim());
+    $$("#tabs button").forEach(b => { if (!keep.includes(b.dataset.tab)) b.remove(); });
+    if (keep.length === 1) $("#tabs").style.display = "none";
+    showTab(keep[0]);
+  }
+  if (P.tab) showTab(P.tab);
+  if (P.title) $("#appTitle").textContent = P.title;
+
+  $$(".dep").forEach(s => s.onchange = () => { $("#" + s.id + "T").style.display = s.value === "custom" ? "block" : "none"; });
+  $("#rMode").onchange = () => { $("#truckBox").style.display = $("#rMode").value === "truck" ? "flex" : "none"; };
+
+  /* ---- Autosugerencias HERE ---- */
+  async function geocodeFree(q){
+    const c = centerLL();
+    const j = await hereGet(CFG.api.geocode, { q, at: ll(c), in: `countryCode:${CFG.country}`, limit: 1, lang: CFG.lang });
+    const it = (j.items || [])[0];
+    if (!it){ toast("Sin resultados para: " + q); return null; }
+    return { lat: it.position.lat, lng: it.position.lng, label: it.address?.label || it.title };
+  }
+  async function revLabel(p){
+    try {
+      const j = await hereGet(CFG.api.revgeocode, { at: ll(p), lang: CFG.lang, limit: 1 });
+      return j.items?.[0]?.address?.label || `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+    } catch(e){ return `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`; }
+  }
+  function suggest(input, onPick){
+    const box = document.createElement("div"); box.className = "sugg"; input.parentElement.appendChild(box);
+    let t, seq = 0;
+    input.addEventListener("input", () => {
+      clearTimeout(t); const q = input.value.trim();
+      if (q.length < 3){ box.innerHTML = ""; return; }
+      t = setTimeout(async () => {
+        const my = ++seq;
+        try {
+          const j = await hereGet(CFG.api.autosuggest, { q, at: ll(centerLL()), in: `countryCode:${CFG.country}`, limit: 7, lang: CFG.lang });
+          if (my !== seq) return;
+          const items = (j.items || []).filter(i => i.position);
+          box.innerHTML = items.length ? items.map((it, i) => `<button type="button" data-i="${i}"><b>${esc(it.title)}</b><small>${esc(it.address?.label || "")}</small></button>`).join("") : `<div class="empty">Sin sugerencias. Presiona Enter para geocodificar.</div>`;
+          box.querySelectorAll("button").forEach(b => b.onclick = () => {
+            const it = items[+b.dataset.i]; input.value = it.title; box.innerHTML = "";
+            onPick({ lat: it.position.lat, lng: it.position.lng, label: it.address?.label || it.title, raw: it });
+          });
+        } catch(e){ toast(e.message); }
+      }, 280);
+    });
+    input.addEventListener("keydown", async e => {
+      if (e.key === "Escape") box.innerHTML = "";
+      if (e.key === "Enter" && input.value.trim()){
+        e.preventDefault(); box.innerHTML = "";
+        try { const p = await geocodeFree(input.value.trim()); if (p){ input.value = p.label; onPick(p); } } catch(err){ toast(err.message); }
+      }
+    });
+    document.addEventListener("click", e => { if (!input.parentElement.contains(e.target)) box.innerHTML = ""; });
+  }
+
+  /* ---- Puntos ---- */
+  const PT_STYLE = {
+    "route.origin": { color: "#1a9850", label: "A" },
+    "route.via": { color: "#f7a600", label: "V" },
+    "route.destination": { color: "#d73027", label: "B" },
+    "iso.origin": { color: "#0f62fe", label: "" }
+  };
+  const INPUT = { "route.origin": "#rOrigin", "route.via": "#rVia", "route.destination": "#rDest", "iso.origin": "#iOrigin" };
+  function markerGraphics(p, color, label, tag){
+    const g = [ new Graphic({ geometry: new Point({ longitude: p.lng, latitude: p.lat }), attributes: { tag },
+      symbol: { type: "simple-marker", size: 18, color, outline: { color: "#fff", width: 2 } } }) ];
+    if (label) g.push(new Graphic({ geometry: new Point({ longitude: p.lng, latitude: p.lat }), attributes: { tag },
+      symbol: { type: "text", text: label, color: "#fff", font: { size: 9, weight: "bold" }, yoffset: -3 } }));
+    return g;
+  }
+  function redrawPoints(){
+    pointLayer.removeAll();
+    for (const [k, st] of Object.entries(PT_STYLE)){
+      const [grp, f] = k.split("."); const p = S[grp][f];
+      if (p) pointLayer.addMany(markerGraphics(p, st.color, st.label, k));
+    }
+    S.matrix.forEach((p, i) => pointLayer.addMany(markerGraphics(p, "#6929c4", String(i + 1), "m" + i)));
+  }
+  function setPoint(target, p){
+    const [grp, f] = target.split(".");
+    S[grp][f] = p;
+    if (INPUT[target]) $(INPUT[target]).value = p ? p.label : "";
+    redrawPoints();
+    if (grp === "route" && S.route.origin && S.route.destination) calcRoute();
+    if (grp === "iso" && p) calcIso();
+  }
+  suggest($("#rOrigin"), p => setPoint("route.origin", p));
+  suggest($("#rVia"), p => setPoint("route.via", p));
+  suggest($("#rDest"), p => setPoint("route.destination", p));
+  suggest($("#iOrigin"), p => setPoint("iso.origin", p));
+  suggest($("#mAdd"), p => { addMatrixPoint(p); $("#mAdd").value = ""; });
+  suggest($("#sQ"), p => showSearchResults([p.raw || { title: p.label, position: { lat: p.lat, lng: p.lng }, address: { label: p.label } }], true));
+  $("#rVia").addEventListener("change", () => { if (!$("#rVia").value.trim()) setPoint("route.via", null); });
+
+  const PICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>';
+  $$(".pick").forEach(b => {
+    b.innerHTML = PICK_SVG;
+    b.onclick = () => {
+      const armed = S.pick === b.dataset.pick;
+      $$(".pick").forEach(x => x.classList.remove("armed"));
+      S.pick = armed ? null : b.dataset.pick;
+      if (S.pick){ b.classList.add("armed"); toast("Haz clic en el mapa para ubicar el punto.", 2500); }
+      view.container.style.cursor = S.pick ? "crosshair" : "";
+    };
+  });
+
+  /* ---- Clic en el mapa ---- */
+  view.on("click", async ev => {
+    const p = { lat: +ev.mapPoint.latitude.toFixed(6), lng: +ev.mapPoint.longitude.toFixed(6) };
+    if (S.pick){
+      const target = S.pick; S.pick = null; $$(".pick").forEach(x => x.classList.remove("armed")); view.container.style.cursor = "";
+      p.label = await revLabel(p); setPoint(target, p); return;
+    }
+    const hit = await view.hitTest(ev, { include: [flowLayer, incLayer, searchLayer] });
+    if (hit.results.length) return; // deja que el popup muestre el detalle
+    if (S.tab === "ruta"){
+      p.label = await revLabel(p);
+      setPoint(!S.route.origin ? "route.origin" : "route.destination", p);
+    } else if (S.tab === "iso"){
+      p.label = await revLabel(p); setPoint("iso.origin", p);
+    } else if (S.tab === "matriz"){
+      p.label = await revLabel(p); addMatrixPoint(p);
+    } else if (S.tab === "buscar"){
+      try {
+        const j = await hereGet(CFG.api.revgeocode, { at: ll(p), lang: CFG.lang, limit: 1 });
+        const a = j.items?.[0];
+        view.openPopup({ location: ev.mapPoint, title: a ? esc(a.title) : "Sin dirección",
+          content: a ? `<b>Dirección:</b> ${esc(a.address?.label)}<br><b>Comuna:</b> ${esc(a.address?.city || a.address?.district || "—")}<br><b>Región:</b> ${esc(a.address?.state || "—")}<br><b>Coordenadas:</b> ${p.lat}, ${p.lng}` : `${p.lat}, ${p.lng}` });
+      } catch(e){ toast(e.message); }
+    }
+  });
+
+  /* =====================  RUTAS (Routing v8)  ===================== */
+  async function calcRoute(){
+    const { origin, via, destination } = S.route;
+    if (!origin || !destination){ toast("Define origen y destino."); return; }
+    const mode = $("#rMode").value;
+    let params;
+    try {
+      params = { transportMode: mode, origin: ll(origin), destination: ll(destination),
+        return: "polyline,summary,actions,instructions", lang: "es-ES", ...depParams("r") };
+    } catch(e){ return; }
+    if (via) params.via = ll(via); else params.alternatives = 2;
+    const avoid = $$("input[name=avoid]:checked").map(i => i.value);
+    if (avoid.length) params["avoid[features]"] = avoid.join(",");
+    if (mode === "truck"){
+      const h = parseFloat($("#tH").value), w = parseFloat($("#tW").value);
+      if (h > 0) params["vehicle[height]"] = Math.round(h * 100);
+      if (w > 0) params["vehicle[grossWeight]"] = Math.round(w * 1000);
+    }
+    try {
+      const j = await hereGet(CFG.api.routes, params);
+      if (!j.routes?.length){ toast("HERE no encontró ruta" + (j.notices?.[0]?.title ? ": " + j.notices[0].title : ".")); return; }
+      S.routes = j.routes.map(r => {
+        const paths = r.sections.map(s => decodeFlex(s.polyline).map(([la, ln]) => [ln, la]));
+        const sum = r.sections.reduce((a, s) => ({ d: a.d + s.summary.duration, b: a.b + (s.summary.baseDuration ?? s.summary.duration), l: a.l + s.summary.length }), { d: 0, b: 0, l: 0 });
+        const actions = r.sections.flatMap(s => s.actions || []);
+        return { paths, sum, actions };
+      });
+      drawRoutes(0, true);
+    } catch(e){ toast(e.message, 8000); }
+  }
+  function drawRoutes(sel, zoom){
+    S.sel = sel; routeLayer.removeAll();
+    S.routes.forEach((r, i) => { if (i !== sel) routeLayer.add(new Graphic({ geometry: new Polyline({ paths: r.paths, spatialReference: wgs }), symbol: { type: "simple-line", color: [110, 125, 145, .85], width: 4 } })); });
+    const r = S.routes[sel]; const geom = new Polyline({ paths: r.paths, spatialReference: wgs });
+    routeLayer.add(new Graphic({ geometry: geom, symbol: { type: "simple-line", color: "#ffffff", width: 9 } }));
+    routeLayer.add(new Graphic({ geometry: geom, symbol: { type: "simple-line", color: "#0f62fe", width: 5 } }));
+    if (zoom) view.goTo(geom.extent.clone().expand(1.25)).catch(() => {});
+    $("#rCards").innerHTML = S.routes.map((x, i) => {
+      const delay = x.sum.d - x.sum.b, cls = delay < 120 ? "ok" : delay < 600 ? "warn" : "bad";
+      return `<div class="card ${i === sel ? "sel" : ""}" data-i="${i}">
+        <div class="big">${fmtMin(x.sum.d)} <span style="font-weight:500;font-size:13px;color:var(--muted)">· ${fmtKm(x.sum.l)}</span></div>
+        <div class="meta">${i === 0 ? "Ruta recomendada" : "Alternativa " + i}</div>
+        <div class="delay ${cls}">${delay > 30 ? "+" + fmtMin(delay) + " por tráfico" : "Sin demoras relevantes"}</div></div>`;
+    }).join("");
+    $$("#rCards .card").forEach(c => c.onclick = () => drawRoutes(+c.dataset.i, true));
+    $("#rSteps").innerHTML = r.actions.filter(a => a.instruction).map(a => `<li>${esc(a.instruction)} <small>${a.length ? fmtKm(a.length) : ""}</small></li>`).join("");
+  }
+  $("#rGo").onclick = calcRoute;
+  $("#rClear").onclick = () => { S.route = { origin: null, via: null, destination: null }; ["#rOrigin", "#rVia", "#rDest"].forEach(s => $(s).value = ""); S.routes = []; routeLayer.removeAll(); $("#rCards").innerHTML = ""; $("#rSteps").innerHTML = ""; redrawPoints(); };
+
+  /* =====================  ISÓCRONAS (Isoline v8)  ===================== */
+  const ISO_COLORS = ["#1a9850", "#91cf60", "#fee08b", "#fc8d59", "#d73027", "#a50026"];
+  async function calcIso(){
+    const o = S.iso.origin; if (!o){ toast("Define el punto."); return; }
+    const type = $("#iType").value, reverse = $("#iDir").value === "to";
+    const vals = $("#iVals").value.split(/[,; ]+/).map(Number).filter(v => v > 0).slice(0, 6).sort((a, b) => a - b);
+    if (!vals.length){ toast("Escribe uno o más rangos, ej: 5,10,15"); return; }
+    let params;
+    try {
+      params = { transportMode: $("#iMode").value, "range[type]": type,
+        "range[values]": vals.map(v => type === "time" ? Math.round(v * 60) : Math.round(v * 1000)).join(","), ...depParams("i", reverse) };
+    } catch(e){ return; }
+    params[reverse ? "destination" : "origin"] = ll(o);
+    try {
+      const j = await hereGet(CFG.api.isolines, params);
+      isoLayer.removeAll();
+      const rows = [];
+      const isos = (j.isolines || []).slice().sort((a, b) => b.range.value - a.range.value);
+      isos.forEach(iso => {
+        const idx = vals.findIndex(v => Math.round(type === "time" ? v * 60 : v * 1000) === iso.range.value);
+        const col = ISO_COLORS[Math.max(0, idx)];
+        const rings = [];
+        (iso.polygons || []).forEach(pg => {
+          rings.push(decodeFlex(pg.outer).map(([la, ln]) => [ln, la]));
+          (pg.inner || []).forEach(inn => rings.push(decodeFlex(inn).map(([la, ln]) => [ln, la])));
+        });
+        if (!rings.length) return;
+        const poly = new Polygon({ rings, spatialReference: wgs });
+        const area = geometryEngine.geodesicArea(poly, "square-kilometers");
+        const lbl = type === "time" ? `${Math.round(iso.range.value / 60)} min` : `${(iso.range.value / 1000).toLocaleString("es-CL")} km`;
+        isoLayer.add(new Graphic({ geometry: poly, attributes: { rango: lbl, area: area.toFixed(1) },
+          symbol: { type: "simple-fill", color: hexA(col, .28), outline: { color: col, width: 1.5 } } }));
+        rows.push({ lbl, col, area });
+      });
+      rows.reverse();
+      $("#iLegend").innerHTML = rows.map(r => `<div class="it"><span class="sw" style="background:${r.col}"></span><b>${r.lbl}</b>&nbsp;· ${r.area.toLocaleString("es-CL", { maximumFractionDigits: 1 })} km²</div>`).join("");
+      if (isoLayer.graphics.length) view.goTo(isoLayer.graphics.getItemAt(0).geometry.extent.clone().expand(1.15)).catch(() => {});
+    } catch(e){ toast(e.message, 8000); }
+  }
+  function hexA(h, a){ const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255, a]; }
+  $("#iGo").onclick = calcIso;
+  $("#iClear").onclick = () => { S.iso.origin = null; $("#iOrigin").value = ""; isoLayer.removeAll(); $("#iLegend").innerHTML = ""; redrawPoints(); };
+
+  /* =====================  MATRIZ OD (Matrix v8)  ===================== */
+  function addMatrixPoint(p){
+    if (S.matrix.length >= CFG.maxMatrixPoints){ toast(`Máximo ${CFG.maxMatrixPoints} puntos.`); return; }
+    S.matrix.push(p); renderMList(); redrawPoints();
+  }
+  function renderMList(){
+    $("#mList").innerHTML = S.matrix.map((p, i) => `<div class="p"><b>${i + 1}</b><span title="${esc(p.label)}">${esc(p.label)}</span><button data-i="${i}" title="Quitar">×</button></div>`).join("") || `<div class="hint">Agrega 2 o más puntos (ej: terminales, hospitales, comunas).</div>`;
+    $$("#mList button").forEach(b => b.onclick = () => { S.matrix.splice(+b.dataset.i, 1); renderMList(); redrawPoints(); $("#mOut").innerHTML = ""; });
+  }
+  renderMList();
+  $("#mGo").onclick = async () => {
+    const pts = S.matrix; if (pts.length < 2){ toast("Agrega al menos 2 puntos."); return; }
+    let dep; try { dep = depParams("m"); } catch(e){ return; }
+    const body = { origins: pts.map(p => ({ lat: p.lat, lng: p.lng })), destinations: pts.map(p => ({ lat: p.lat, lng: p.lng })),
+      regionDefinition: { type: "autoCircle" }, transportMode: $("#mMode").value, matrixAttributes: ["travelTimes", "distances"], ...dep };
+    try {
+      const j = await herePost(CFG.api.matrix, { async: "false" }, body);
+      const m = j.matrix, n = m.numDestinations;
+      const head = `<tr><th>O \\ D</th>${pts.map((_, i) => `<th>${i + 1}</th>`).join("")}</tr>`;
+      const rows = pts.map((_, i) => `<tr><th>${i + 1}</th>${pts.map((_, k) => {
+        const idx = i * n + k, err = m.errorCodes && m.errorCodes[idx];
+        if (i === k) return `<td class="d">—</td>`;
+        if (err) return `<td class="d" title="Sin ruta">✕</td>`;
+        return `<td title="${fmtKm(m.distances[idx])}">${Math.round(m.travelTimes[idx] / 60)}</td>`;
+      }).join("")}</tr>`).join("");
+      $("#mOut").innerHTML = `<table class="mx">${head}${rows}</table><p class="hint">Minutos de viaje de cada origen (fila) a cada destino (columna). Pasa el cursor sobre una celda para ver la distancia.</p>`;
+    } catch(e){ toast(e.message, 8000); }
+  };
+  $("#mClear").onclick = () => { S.matrix = []; renderMList(); redrawPoints(); $("#mOut").innerHTML = ""; };
+
+  /* =====================  BÚSQUEDA (Geocoding & Search v7)  ===================== */
+  const searchPopup = { title: "{titulo}", content: "<b>Dirección:</b> {direccion}<br><b>Categoría:</b> {categoria}<br><b>Teléfono:</b> {telefono}<br><b>Distancia al centro:</b> {distancia}" };
+  function showSearchResults(items, zoomTo){
+    searchLayer.removeAll();
+    const gs = items.filter(it => it.position).map(it => new Graphic({
+      geometry: new Point({ longitude: it.position.lng, latitude: it.position.lat }),
+      attributes: { titulo: it.title, direccion: it.address?.label || "—", categoria: (it.categories || []).map(c => c.name).join(", ") || it.resultType || "—",
+        telefono: it.contacts?.[0]?.phone?.[0]?.value || "—", distancia: it.distance != null ? fmtKm(it.distance) : "—" },
+      symbol: { type: "simple-marker", style: "circle", size: 12, color: "#0f62fe", outline: { color: "#fff", width: 2 } },
+      popupTemplate: searchPopup
+    }));
+    searchLayer.addMany(gs);
+    $("#sCards").innerHTML = gs.map((g, i) => `<div class="card" data-i="${i}"><b>${esc(g.attributes.titulo)}</b><div class="meta">${esc(g.attributes.direccion)}</div>${g.attributes.distancia !== "—" ? `<div class="meta">${g.attributes.distancia}</div>` : ""}</div>`).join("") || `<div class="hint">Sin resultados.</div>`;
+    $$("#sCards .card").forEach(c => c.onclick = () => { const g = gs[+c.dataset.i]; view.goTo({ target: g.geometry, zoom: Math.max(view.zoom, 16) }).then(() => view.openPopup({ features: [g], location: g.geometry })).catch(() => {}); });
+    if (zoomTo && gs.length === 1) view.goTo({ target: gs[0].geometry, zoom: 16 }).catch(() => {});
+    else if (gs.length > 1) view.goTo(gs.map(g => g.geometry)).catch(() => {});
+  }
+  $$("#sChips button").forEach(b => b.onclick = async () => {
+    try {
+      const j = await hereGet(CFG.api.discover, { q: b.dataset.q, at: ll(centerLL()), in: `countryCode:${CFG.country}`, limit: 25, lang: CFG.lang });
+      showSearchResults(j.items || [], false);
+      toast(`${(j.items || []).length} resultados de "${b.textContent}" cerca del centro del mapa.`, 3000);
+    } catch(e){ toast(e.message, 8000); }
+  });
+
+  /* =====================  TRÁFICO (Traffic v7)  ===================== */
+  const jamColor = (jf, closed) => closed ? "#111111" : jf < 3 ? "#1a9850" : jf < 6 ? "#f7c600" : jf < 9 ? "#f46d43" : "#a50026";
+  function viewBbox(maxDeg){
+    const e = webMercatorUtils.webMercatorToGeographic(view.extent);
+    if ((e.xmax - e.xmin) > maxDeg || (e.ymax - e.ymin) > maxDeg) return null;
+    return `bbox:${e.xmin.toFixed(5)},${e.ymin.toFixed(5)},${e.xmax.toFixed(5)},${e.ymax.toFixed(5)}`;
+  }
+  const flowPopup = { title: "{tramo}", content: "<b>Velocidad actual:</b> {vel} km/h<br><b>Velocidad libre:</b> {libre} km/h<br><b>Índice de congestión:</b> {jam} / 10<br><b>Confianza del dato:</b> {conf}<br><b>Longitud:</b> {largo}" };
+  async function loadFlow(silent){
+    const bbox = viewBbox(0.6);
+    if (!bbox){ if (!silent) toast("Acércate más al mapa (la consulta de velocidades admite un área de hasta ~60 km)."); return; }
+    const params = { in: bbox, locationReferencing: "shape" };
+    if ($("#tFC").checked) params.functionalClasses = "1,2,3";
+    try {
+      const j = await hereGet(CFG.api.flow, params);
+      flowLayer.removeAll();
+      let totLen = 0, wSpeed = 0, congLen = 0, closedN = 0;
+      const gs = [];
+      (j.results || []).forEach(r => {
+        const cf = r.currentFlow || {}, loc = r.location || {};
+        const closed = cf.traversability === "closed";
+        const jf = cf.jamFactor ?? 0, len = loc.length || 0;
+        const paths = (loc.shape?.links || []).map(lk => lk.points.map(pt => [pt.lng, pt.lat])).filter(p => p.length > 1);
+        if (!paths.length) return;
+        totLen += len; if (cf.speed != null) wSpeed += cf.speed * len; if (jf >= 6) congLen += len; if (closed) closedN++;
+        gs.push(new Graphic({ geometry: new Polyline({ paths, spatialReference: wgs }),
+          attributes: { tramo: loc.description || "Tramo vial", vel: cf.speed != null ? Math.round(cf.speed * 3.6) : "—", libre: cf.freeFlow != null ? Math.round(cf.freeFlow * 3.6) : "—",
+            jam: jf.toFixed(1), conf: cf.confidence != null ? Math.round(cf.confidence * 100) + "%" : "—", largo: fmtKm(len) },
+          symbol: { type: "simple-line", color: jamColor(jf, closed), width: 3.5, cap: "round" }, popupTemplate: flowPopup }));
+      });
+      flowLayer.addMany(gs);
+      const avg = totLen ? (wSpeed / totLen) * 3.6 : 0;
+      const ts = j.sourceUpdated ? new Date(j.sourceUpdated).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+      setKpis("flow", { "Tramos con dato": gs.length.toLocaleString("es-CL"), "Velocidad media": `${Math.round(avg)} km/h`,
+        "Red congestionada": totLen ? `${Math.round(congLen / totLen * 100)}%` : "—", "Actualizado": ts, "Tramos cerrados": closedN });
+      if (!silent) toast(`${gs.length} tramos con velocidad en vivo.`, 2500);
+    } catch(e){ if (!silent) toast(e.message, 8000); }
+  }
+  const INC_TYPE = { accident: "Accidente", congestion: "Congestión", construction: "Obras", disabledVehicle: "Vehículo detenido", massTransit: "Transporte público",
+    plannedEvent: "Evento programado", roadHazard: "Peligro en la vía", roadClosure: "Cierre de vía", weather: "Clima", laneRestriction: "Restricción de pista", other: "Otro" };
+  const CRIT = { critical: ["Crítico", "#a50026"], major: ["Mayor", "#d73027"], minor: ["Menor", "#f46d43"], lowImpact: ["Bajo impacto", "#f7a600"] };
+  const incPopup = { title: "{tipo} · {criticidad}", content: "{descripcion}<br><br><b>Inicio:</b> {inicio}<br><b>Fin estimado:</b> {fin}<br><b>Vía cerrada:</b> {cerrada}" };
+  async function loadInc(silent){
+    const bbox = viewBbox(0.99);
+    if (!bbox){ if (!silent) toast("Acércate más al mapa para consultar incidentes."); return; }
+    try {
+      const j = await hereGet(CFG.api.incidents, { in: bbox, locationReferencing: "shape", lang: "es" });
+      incLayer.removeAll();
+      const counts = {};
+      (j.results || []).forEach(r => {
+        const d = r.incidentDetails || {}, loc = r.location || {};
+        const [critTxt, col] = CRIT[d.criticality] || ["—", "#f46d43"];
+        const tipo = INC_TYPE[d.type] || d.type || "Incidente";
+        counts[tipo] = (counts[tipo] || 0) + 1;
+        const attrs = { tipo, criticidad: critTxt, descripcion: d.description?.value || d.summary?.value || "", cerrada: d.roadClosed ? "Sí" : "No",
+          inicio: d.startTime ? new Date(d.startTime).toLocaleString("es-CL") : "—", fin: d.endTime ? new Date(d.endTime).toLocaleString("es-CL") : "—" };
+        const paths = (loc.shape?.links || []).map(lk => lk.points.map(pt => [pt.lng, pt.lat])).filter(p => p.length > 1);
+        if (paths.length) incLayer.add(new Graphic({ geometry: new Polyline({ paths, spatialReference: wgs }), attributes: attrs, popupTemplate: incPopup,
+          symbol: { type: "simple-line", color: d.roadClosed ? "#111" : col, width: 6, style: d.roadClosed ? "short-dash" : "solid" } }));
+        const first = loc.shape?.links?.[0]?.points?.[0];
+        if (first) incLayer.add(new Graphic({ geometry: new Point({ longitude: first.lng, latitude: first.lat }), attributes: attrs, popupTemplate: incPopup,
+          symbol: { type: "simple-marker", style: "diamond", size: 14, color: col, outline: { color: "#fff", width: 1.5 } } }));
+      });
+      const total = (j.results || []).length;
+      setKpis("inc", Object.assign({ "Incidentes": total }, Object.fromEntries(Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5))));
+      if (!silent) toast(`${total} incidentes en la vista.`, 2500);
+    } catch(e){ if (!silent) toast(e.message, 8000); }
+  }
+  const KP = { flow: {}, inc: {} };
+  function setKpis(group, obj){
+    KP[group] = obj;
+    $("#tKpis").innerHTML = [...Object.entries(KP.flow), ...Object.entries(KP.inc)].map(([k, v]) => `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(k)}</div></div>`).join("");
+  }
+  $("#tTiles").onchange = e => { trafficTiles.visible = e.target.checked; };
+  $("#tFlow").onclick = () => loadFlow(false);
+  $("#tInc").onclick = () => loadInc(false);
+  $("#tClear").onclick = () => { flowLayer.removeAll(); incLayer.removeAll(); KP.flow = {}; KP.inc = {}; $("#tKpis").innerHTML = ""; };
+  let autoT = null;
+  $("#tAuto").onchange = e => {
+    clearInterval(autoT);
+    if (e.target.checked){ autoT = setInterval(() => { if (flowLayer.graphics.length) loadFlow(true); if (incLayer.graphics.length) loadInc(true); }, 60000); toast("Actualización automática activada.", 2000); }
+  };
+  trafficTiles.on("layerview-create-error", () => toast("No cargó la capa de teselas de tráfico (revisa que tu key tenga Traffic habilitado)."));
+});
+}
+</script>
+</body>
+</html>
