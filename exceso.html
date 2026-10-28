@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
 <style>
   :root{
-    --bg:#f5f7fa; --panel:#fff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea; --soft:#f3f6f9;
-    --accent:#0f62fe; --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --sim:#7a4cc2;
+    --bg:#F3F5F8; --panel:#fff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea; --soft:#f1f5f7;
+    --accent:#0E8C84; --accent-soft:#E3F4F2; --navy:#0B2545; --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --sim:#7a4cc2;
     --radius:10px; --shadow:0 2px 10px rgba(16,24,40,.08);
     font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   }
@@ -31,7 +31,7 @@
   label.f{display:block;font-size:11.5px;color:var(--muted);margin:8px 0 3px;font-weight:600}
   input[type=text],input[type=number],input[type=email],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink);font-family:inherit}
   textarea{min-height:70px;font-family:Consolas,monospace;font-size:12px}
-  input:focus,select:focus,textarea:focus{outline:2px solid #b9cfff;border-color:var(--accent)}
+  input:focus,select:focus,textarea:focus{outline:2px solid #9EDBD5;border-color:var(--accent)}
   .row{display:flex;gap:6px;align-items:flex-end}
   .row>*{flex:1;min-width:0}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;cursor:pointer}
@@ -121,6 +121,62 @@
     #panelBody{overflow:visible}
     main{min-height:90vh}
   }
+  /* ===== Tema Demo Subtrans (igual al Experience Builder) ===== */
+  header{background:#fff}
+  header .t{color:var(--navy)}
+  #panel{width:400px}
+  #panelBody{padding:4px 14px 14px;background:var(--bg)}
+  #src{background:#fff}
+  .step{background:#fff;border:1px solid var(--line);border-radius:12px;margin-top:10px;transition:box-shadow .15s,border-color .15s}
+  .step.open{border-color:var(--accent);box-shadow:0 4px 14px rgba(11,37,69,.08)}
+  .step .sh{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:0;background:transparent;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);border-radius:12px}
+  .step .sh:hover{background:var(--accent-soft)}
+  .step.open .sh:hover{background:transparent}
+  .step .n{width:24px;height:24px;border-radius:50%;background:#e6ebf1;color:var(--navy);display:grid;place-items:center;font-size:12px;font-weight:700;flex:0 0 24px}
+  .step.open .n{background:var(--accent);color:#fff}
+  .step.done:not(.open) .n{background:var(--ok);color:#fff;font-size:0}
+  .step.done:not(.open) .n::after{content:"✓";font-size:13px}
+  .step .stt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .step .stt b{font-size:13.5px}
+  .step .stt small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step.done .stt small{color:var(--ok)}
+  .step.bad .stt small{color:var(--warn)}
+  .step .chev{width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px;transition:transform .15s}
+  .step.open .chev{transform:rotate(-135deg);margin-top:6px}
+  .step .sb{display:none;padding:0 12px 12px}
+  .step.open .sb{display:block}
+  .nx{display:flex;justify-content:flex-end;margin-top:12px}
+  .yrs{display:flex;gap:3px;flex-wrap:wrap;margin-top:10px}
+  .yrs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 7px;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--ink);font-family:inherit}
+  .yrs button.cur{background:var(--navy);border-color:var(--navy);color:#fff}
+  .yrs button i{font-style:normal;font-size:9.5px;background:var(--accent);color:#fff;border-radius:999px;padding:0 4px;margin-left:3px}
+  .yrfoot{display:flex;justify-content:flex-end;margin-top:4px}
+  .all{border:0;background:none;color:var(--accent);font-size:12px;padding:2px;cursor:pointer;font-family:inherit}
+  .months{margin-top:8px}
+  .yr{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+  .yr[hidden]{display:none}
+  .yr button{font-size:12px;padding:7px 0;border-radius:7px}
+  table.bins input{width:68px}
+  details.help{margin-top:8px}
+  details.help summary{font-size:12px;color:var(--accent);cursor:pointer}
+  .simnote{margin:12px 2px 0}
+  .loc .top{flex-wrap:wrap}
+  .loc .top b{white-space:nowrap}
+  .loc .top>span:not(.chip){flex:1 1 150px;font-size:11.5px}
+  #panelFoot{border-top:1px solid var(--line);padding:10px 14px 12px;background:#fff;box-shadow:0 -4px 12px rgba(11,37,69,.05)}
+  #panelFoot .est{margin-top:0;background:var(--accent-soft)}
+  #panelFoot .btn.full{margin-top:8px;padding:10px 12px;font-size:14px}
+  .est .errs{color:var(--bad);margin-top:3px}
+  .est .errs span{color:var(--muted)}
+  .btn:hover:not(:disabled){filter:brightness(.95)}
+  .btn.sec{background:#eef2f6;color:var(--navy)}
+  #viewWrap{height:52%}
+  #bottom nav button.on{background:var(--accent-soft);color:var(--accent)}
+  .seg button.on{color:var(--accent)}
+  .card{box-shadow:0 1px 4px rgba(11,37,69,.06)}
+  @media (max-width:860px){
+    #panelFoot{position:sticky;bottom:0;z-index:5}
+  }
 </style>
 </head>
 <body>
@@ -137,93 +193,115 @@
     <div id="framed" hidden style="font-size:11.5px;padding:6px 16px;background:#fff8e6;border-bottom:1px solid var(--line)">¿No se descargan los archivos? <a href="#" id="openTab">Abrir el módulo en una pestaña nueva</a></div>
     <div id="panelBody">
 
-      <h3><span class="n">1</span>Ubicaciones</h3>
-      <div class="seg" id="locMode">
-        <button data-p="pIndiv" class="on">Individual</button>
-        <button data-p="pMasiva">Masiva</button>
-        <button data-p="pBuscar">Buscar</button>
-      </div>
-      <div class="pane on" id="pIndiv">
-        <div class="row">
-          <div><label class="f">ID punto</label><input type="number" id="iId" min="1" step="1"></div>
-          <div><label class="f">Sentido</label>
-            <select id="iSen">
-              <option value="0">Hacia el norte</option><option value="45">Hacia el noreste</option><option value="90">Hacia el este</option><option value="135">Hacia el sureste</option>
-              <option value="180">Hacia el sur</option><option value="225">Hacia el suroeste</option><option value="270">Hacia el oeste</option><option value="315">Hacia el noroeste</option>
-            </select></div>
+      <section class="step open" data-s="1">
+        <button class="sh" type="button"><span class="n">1</span><span class="stt"><b>Ubicaciones</b><small id="sum1">Sin ubicaciones</small></span><span class="chev"></span></button>
+        <div class="sb">
+          <div class="seg" id="locMode">
+            <button data-p="pIndiv" class="on">Individual</button>
+            <button data-p="pMasiva">Masiva</button>
+            <button data-p="pBuscar">Buscar</button>
+          </div>
+          <div class="pane on" id="pIndiv">
+            <div class="row">
+              <div style="flex:0 0 92px"><label class="f">ID punto</label><input type="number" id="iId" min="1" step="1"></div>
+              <div><label class="f">Sentido de circulación</label>
+                <select id="iSen">
+                  <option value="0">Hacia el norte</option><option value="45">Hacia el noreste</option><option value="90">Hacia el este</option><option value="135">Hacia el sureste</option>
+                  <option value="180">Hacia el sur</option><option value="225">Hacia el suroeste</option><option value="270">Hacia el oeste</option><option value="315">Hacia el noroeste</option>
+                </select></div>
+            </div>
+            <div class="row">
+              <div><label class="f">Latitud</label><input type="text" id="iLat" placeholder="-33.4446"></div>
+              <div><label class="f">Longitud</label><input type="text" id="iLon" placeholder="-70.6529"></div>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn sec" id="iPick" type="button">Elegir en el mapa</button>
+              <button class="btn" id="iAdd" type="button">Agregar ubicación</button>
+            </div>
+          </div>
+          <div class="pane" id="pMasiva">
+            <label class="f">Archivo (XLSX, CSV, GeoJSON, KML o Shapefile .zip)</label>
+            <input type="file" id="mFile" accept=".xlsx,.xls,.csv,.txt,.geojson,.json,.kml,.zip">
+            <label class="f">…o pega filas: id_punto; latitud; longitud; sentido</label>
+            <textarea id="mText" placeholder="101;-33.44455;-70.65293;oeste&#10;102;-33.4566;-70.8651;270"></textarea>
+            <div class="row" style="margin-top:8px">
+              <button class="btn sec" id="mTpl" type="button">Descargar plantilla</button>
+              <button class="btn" id="mGo" type="button">Cargar ubicaciones</button>
+            </div>
+            <p class="hint">Columnas reconocidas: id_punto, latitud/lat/y, longitud/lon/x, sentido (norte, sur, este, oeste, N, NE… u ángulo 0-359).</p>
+          </div>
+          <div class="pane" id="pBuscar">
+            <label class="f">Nombre de vía o ruta, comuna, región o ID de tramo</label>
+            <div class="row"><div><input type="text" id="bQ" placeholder="Ej: Vicuña Mackenna, Maipú, 68"></div><button class="btn" id="bGo" type="button" style="flex:0 0 auto">Buscar</button></div>
+            <div id="bRes" class="locs"></div>
+          </div>
+          <div class="locs" id="locList"></div>
+          <div class="nx"><button class="btn sec sm next" type="button">Continuar: período →</button></div>
         </div>
-        <div class="row">
-          <div><label class="f">Latitud (grados decimales)</label><input type="text" id="iLat" placeholder="-33.4446"></div>
-          <div><label class="f">Longitud (grados decimales)</label><input type="text" id="iLon" placeholder="-70.6529"></div>
+      </section>
+
+      <section class="step" data-s="2">
+        <button class="sh" type="button"><span class="n">2</span><span class="stt"><b>Período y tramos horarios</b><small id="sum2">—</small></span><span class="chev"></span></button>
+        <div class="sb">
+          <div class="quick" style="margin-top:2px">
+            <button class="btn sec sm" data-q="last">Último mes</button>
+            <button class="btn sec sm" data-q="last3">Últimos 3 meses</button>
+            <button class="btn sec sm" data-q="2025">Año 2025</button>
+            <button class="btn sec sm" data-q="clear">Limpiar</button>
+          </div>
+          <div class="yrs" id="yrs"></div>
+          <div class="months" id="months"></div>
+          <div class="row">
+            <div><label class="f">Tramos horarios</label>
+              <select id="hMode"><option value="fixed">Duración fija</option><option value="custom">Rangos personalizados</option></select></div>
+            <div id="hFixedBox"><label class="f">Duración (1 a 24 h)</label><input type="number" id="hDur" min="1" max="24" step="1" value="1"></div>
+          </div>
+          <div id="hCustomBox" style="display:none">
+            <label class="f">Rangos (hh-hh separados por coma)</label>
+            <input type="text" id="hCustom" value="00-06,06-10,10-17,17-21,21-24">
+          </div>
+          <div class="hint" id="hPreview"></div>
+          <div class="nx"><button class="btn sec sm next" type="button">Continuar: tramos de exceso →</button></div>
         </div>
-        <div class="row" style="margin-top:8px">
-          <button class="btn sec" id="iPick" type="button">Elegir en el mapa</button>
-          <button class="btn" id="iAdd" type="button">Agregar ubicación</button>
+      </section>
+
+      <section class="step" data-s="3">
+        <button class="sh" type="button"><span class="n">3</span><span class="stt"><b>Tramos de exceso de velocidad</b><small id="sum3">—</small></span><span class="chev"></span></button>
+        <div class="sb">
+          <table class="bins" id="bins"><thead><tr><th>Desde</th><th>Hasta</th><th>Etiqueta (km/h sobre el límite)</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="quick">
+            <button class="btn sec sm" id="binAdd">+ Agregar tramo</button>
+            <button class="btn sec sm" id="binRef">Tramos referenciales del pliego</button>
+          </div>
+          <details class="help"><summary>¿Cómo se definen?</summary><p class="hint">Deja "Desde" vacío para "sin mínimo" y "Hasta" vacío para "sin máximo". Usa valores negativos para tramos bajo el límite. El límite de cada ubicación se corrige en el paso 1 sin alterar la base de datos.</p></details>
+          <div class="nx"><button class="btn sec sm next" type="button">Continuar: formato →</button></div>
         </div>
-      </div>
-      <div class="pane" id="pMasiva">
-        <label class="f">Archivo (XLSX, CSV, GeoJSON, KML o Shapefile .zip)</label>
-        <input type="file" id="mFile" accept=".xlsx,.xls,.csv,.txt,.geojson,.json,.kml,.zip">
-        <label class="f">…o pega filas: id_punto; latitud; longitud; sentido</label>
-        <textarea id="mText" placeholder="101;-33.44455;-70.65293;oeste&#10;102;-33.4566;-70.8651;270"></textarea>
-        <div class="row" style="margin-top:8px">
-          <button class="btn sec" id="mTpl" type="button">Descargar plantilla</button>
-          <button class="btn" id="mGo" type="button">Cargar ubicaciones</button>
+      </section>
+
+      <section class="step" data-s="4">
+        <button class="sh" type="button"><span class="n">4</span><span class="stt"><b>Formato y opciones</b><small id="sum4">—</small></span><span class="chev"></span></button>
+        <div class="sb">
+          <div class="fmts" id="fmts">
+            <label><input type="checkbox" value="xlsx" checked>XLSX</label>
+            <label><input type="checkbox" value="csv">CSV</label>
+            <label><input type="checkbox" value="geojson">GeoJSON</label>
+            <label><input type="checkbox" value="kml">KML</label>
+            <label><input type="checkbox" value="shp">Shapefile</label>
+          </div>
+          <div class="chk" style="margin-top:10px">
+            <label><input type="checkbox" id="oLanes" checked><span>Incluir cantidad de pistas<small>Funcionalidad opcional 1 · dato HERE por sentido</small></span></label>
+            <label><input type="checkbox" id="oTypes"><span>Desglosar por tipo de vehículo<small>Funcionalidad opcional 2 · livianos, buses y camiones</small></span></label>
+          </div>
+          <label class="f">Correo para notificar consultas masivas</label>
+          <input type="email" id="oMail" placeholder="analista@mtt.gob.cl">
         </div>
-        <p class="hint">Columnas reconocidas: id_punto, latitud/lat/y, longitud/lon/x, sentido (norte, sur, este, oeste, N, NE… u ángulo 0-359).</p>
-      </div>
-      <div class="pane" id="pBuscar">
-        <label class="f">Nombre de vía o ruta, comuna, región o ID de tramo</label>
-        <div class="row"><div><input type="text" id="bQ" placeholder="Ej: Vicuña Mackenna, Maipú, 68"></div><button class="btn" id="bGo" type="button" style="flex:0 0 auto">Buscar</button></div>
-        <div id="bRes" class="locs"></div>
-      </div>
-      <div class="locs" id="locList"></div>
+      </section>
 
-      <h3><span class="n">2</span>Período y tramos horarios</h3>
-      <div class="months" id="months"></div>
-      <div class="quick">
-        <button class="btn sec sm" data-q="last">Último mes</button>
-        <button class="btn sec sm" data-q="last3">Últimos 3 meses</button>
-        <button class="btn sec sm" data-q="2025">Año 2025</button>
-        <button class="btn sec sm" data-q="clear">Limpiar</button>
-      </div>
-      <div class="row">
-        <div><label class="f">Tramos horarios</label>
-          <select id="hMode"><option value="fixed">Duración fija</option><option value="custom">Rangos personalizados</option></select></div>
-        <div id="hFixedBox"><label class="f">Duración (1 a 24 h)</label><input type="number" id="hDur" min="1" max="24" step="1" value="1"></div>
-      </div>
-      <div id="hCustomBox" style="display:none">
-        <label class="f">Rangos (hh-hh separados por coma)</label>
-        <input type="text" id="hCustom" value="00-06,06-10,10-17,17-21,21-24">
-      </div>
-      <div class="hint" id="hPreview"></div>
-
-      <h3><span class="n">3</span>Tramos de exceso de velocidad</h3>
-      <table class="bins" id="bins"><thead><tr><th>Desde (km/h sobre el límite)</th><th>Hasta</th><th>Etiqueta</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="quick">
-        <button class="btn sec sm" id="binAdd">+ Agregar tramo</button>
-        <button class="btn sec sm" id="binRef">Tramos referenciales del pliego</button>
-      </div>
-      <p class="hint">Deja "Desde" vacío para "sin mínimo" y "Hasta" vacío para "sin máximo". Usa valores negativos para tramos bajo el límite. El límite de cada ubicación se puede corregir arriba sin alterar la base de datos.</p>
-
-      <h3><span class="n">4</span>Formato y opciones</h3>
-      <div class="fmts" id="fmts">
-        <label><input type="checkbox" value="xlsx" checked>XLSX</label>
-        <label><input type="checkbox" value="csv">CSV</label>
-        <label><input type="checkbox" value="geojson">GeoJSON</label>
-        <label><input type="checkbox" value="kml">KML</label>
-        <label><input type="checkbox" value="shp">Shapefile</label>
-      </div>
-      <div class="chk" style="margin-top:10px">
-        <label><input type="checkbox" id="oLanes" checked><span>Incluir cantidad de pistas<small>Funcionalidad opcional 1 · dato HERE por sentido</small></span></label>
-        <label><input type="checkbox" id="oTypes"><span>Desglosar por tipo de vehículo<small>Funcionalidad opcional 2 · livianos, buses y camiones</small></span></label>
-      </div>
-      <label class="f">Correo para notificar consultas masivas</label>
-      <input type="email" id="oMail" placeholder="analista@mtt.gob.cl">
-
+      <p class="hint simnote">Conteos y distribuciones de velocidad <b>simulados</b> para el demo a partir de los patrones históricos HERE de cada tramo. En el servicio contratado provienen de HERE Traffic Analytics.</p>
+    </div>
+    <div id="panelFoot">
       <div class="est" id="est"></div>
       <button class="btn full" id="go">Generar archivo</button>
-      <p class="hint">Conteos y distribuciones de velocidad <b>simulados</b> para el demo a partir de los patrones históricos de velocidad HERE de cada tramo. En el servicio contratado provienen de HERE Traffic Analytics.</p>
     </div>
   </aside>
   <main>
@@ -655,14 +733,23 @@ $("#mTpl").onclick = () => {
 /* ============================================================
    PERÍODO Y TRAMOS HORARIOS (Funcionalidad 2)
    ============================================================ */
+let curYr = LAST.y;
 function renderMonths(){
+  let yh = "";
+  for (let y = FIRST.y; y <= LAST.y; y++){
+    const n = MESES.filter((_, i) => S.months.has(mKey(y, i))).length;
+    yh += `<button type="button" data-y="${y}" class="${y === curYr ? "cur" : ""}">${y}${n ? `<i>${n}</i>` : ""}</button>`;
+  }
+  $("#yrs").innerHTML = yh;
   let h = "";
   for (let y = FIRST.y; y <= LAST.y; y++){
-    h += `<div class="yr"><b data-y="${y}" title="Seleccionar año completo">${y}</b>` + MESES.map((m, i) => `<button data-k="${mKey(y, i)}" ${inRange(y, i) ? "" : "disabled"} class="${S.months.has(mKey(y, i)) ? "on" : ""}">${m}</button>`).join("") + "</div>";
+    h += `<div class="yr" data-y="${y}" ${y === curYr ? "" : "hidden"}>` + MESES.map((m, i) => `<button data-k="${mKey(y, i)}" ${inRange(y, i) ? "" : "disabled"} class="${S.months.has(mKey(y, i)) ? "on" : ""}">${m}</button>`).join("") + "</div>";
   }
+  h += `<div class="yrfoot"><button type="button" class="all" id="yrAll">Seleccionar / quitar todo ${curYr}</button></div>`;
   $("#months").innerHTML = h;
   $$("#months button").forEach(b => b.onclick = () => { S.months.has(b.dataset.k) ? S.months.delete(b.dataset.k) : S.months.add(b.dataset.k); renderMonths(); });
-  $$("#months b").forEach(b => b.onclick = () => { const y = +b.dataset.y; const ks = MESES.map((_, i) => mKey(y, i)).filter((k, i) => inRange(y, i)); const all = ks.every(k => S.months.has(k)); ks.forEach(k => all ? S.months.delete(k) : S.months.add(k)); renderMonths(); });
+  $$("#yrs button[data-y]").forEach(b => b.onclick = () => { curYr = +b.dataset.y; renderMonths(); });
+  $("#yrAll").onclick = () => { const y = curYr; const ks = MESES.map((_, i) => mKey(y, i)).filter((k, i) => inRange(y, i)); const all = ks.every(k => S.months.has(k)); ks.forEach(k => all ? S.months.delete(k) : S.months.add(k)); renderMonths(); };
   updateEstimate();
 }
 $$(".quick [data-q]").forEach(b => b.onclick = () => {
@@ -670,7 +757,8 @@ $$(".quick [data-q]").forEach(b => b.onclick = () => {
   if (q === "clear") S.months.clear();
   if (q === "last"){ S.months.clear(); S.months.add(mKey(LAST.y, LAST.m)); }
   if (q === "last3"){ S.months.clear(); for (let i = 0; i < 3; i++){ const d = new Date(LAST.y, LAST.m - i, 1); S.months.add(mKey(d.getFullYear(), d.getMonth())); } }
-  if (q === "2025"){ S.months.clear(); for (let i = 0; i < 12; i++) S.months.add(mKey(2025, i)); }
+  if (q === "2025"){ S.months.clear(); for (let i = 0; i < 12; i++) S.months.add(mKey(2025, i)); curYr = 2025; }
+  if (q === "last" || q === "last3") curYr = LAST.y;
   renderMonths();
 });
 function hourBins(){
@@ -765,15 +853,42 @@ function updateEstimate(){
   if (!$("#est")) return;
   const { errs, rows, excluded } = buildQuery();
   const secs = Math.max(1, Math.round(rows / 60000));
-  let h = rows ? `<b>${nf(rows)}</b> registros estimados. ` : "";
-  if (rows > MAXROWS) h += `<span style="color:var(--bad)">Supera el máximo de ${nf(MAXROWS)} por archivo del demo: divida la consulta.</span>`;
-  else if (rows > RAPIDA) h += `<b>Consulta masiva</b>: el archivo tomará ~${secs} s en este navegador. En el servicio productivo se procesa en servidor (de horas a un día) y se avisa por correo.`;
-  else if (rows) h += `<b>Consulta rápida</b>: el archivo se genera en línea (~${secs} s).`;
-  if (excluded) h += `<br><span style="color:var(--warn)">${excluded} ubicación(es) con error quedarán fuera.</span>`;
-  if (errs.length) h += `<br><span style="color:var(--bad)">${errs.map(esc).join("<br>")}</span>`;
+  let h = rows ? `<b>${nf(rows)}</b> registros · ` : "";
+  if (rows > MAXROWS) h += `<span style="color:var(--bad)">supera el máximo de ${nf(MAXROWS)} del demo: divida la consulta.</span>`;
+  else if (rows > RAPIDA) h += `<b>consulta masiva</b> (~${secs} s en este navegador; en producción se procesa en servidor y se avisa por correo).`;
+  else if (rows) h += `<b>consulta rápida</b> (~${secs} s).`;
+  if (excluded) h += `<div style="color:var(--warn)">${excluded} ubicación(es) con error quedarán fuera.</div>`;
+  if (errs.length) h += `<div class="errs">${esc(errs[0])}${errs.length > 1 ? ` <span>(+${errs.length - 1} pendiente${errs.length > 2 ? "s" : ""})</span>` : ""}</div>`;
   $("#est").innerHTML = h || "Completa los pasos para estimar la consulta.";
+  $("#est").title = errs.join("\n");
   $("#go").disabled = !!errs.length || rows > MAXROWS;
+  stepSummaries();
 }
+function setStep(n, txt, ok, bad){
+  const el = document.querySelector(`.step[data-s="${n}"]`); if (!el) return;
+  el.querySelector(".stt small").textContent = txt;
+  el.classList.toggle("done", !!ok); el.classList.toggle("bad", !ok && !!bad);
+}
+function stepSummaries(){
+  const val = S.locs.filter(l => l.status === "ok" || l.status === "warn"), err = S.locs.filter(l => l.status === "err").length, pend = S.locs.filter(l => l.status === "pend").length;
+  const sinLim = val.filter(l => !l.lim).length;
+  setStep(1, S.locs.length ? `${val.length} ubicada(s)${pend ? ` · ${pend} ubicando…` : ""}${err ? ` · ${err} con error` : ""}${sinLim ? ` · ${sinLim} sin límite` : ""}` : "Sin ubicaciones", val.length && !sinLim, err || sinLim);
+  const hb = hourBins(), ms = [...S.months].sort();
+  const mTxt = k => `${MESES[+k.slice(5) - 1]} ${k.slice(0, 4)}`;
+  const per = !ms.length ? "Sin meses" : ms.length === 1 ? mTxt(ms[0]) : `${ms.length} meses (${mTxt(ms[0])} – ${mTxt(ms[ms.length - 1])})`;
+  setStep(2, `${per} · ${hb.err ? "horario inválido" : hb.bins.length + " tramo(s) horario(s)"}`, ms.length && !hb.err, !ms.length || hb.err);
+  const be = validateBins();
+  setStep(3, be ? be : `${S.bins.length} tramo(s): ${S.bins.slice(0, 3).map(binLabel).join(", ")}${S.bins.length > 3 ? "…" : ""}`, !be, be);
+  const fm = $$("#fmts input:checked").map(i => i.value.toUpperCase());
+  setStep(4, fm.length ? fm.join(", ") + ($("#oLanes").checked ? " · pistas" : "") + ($("#oTypes").checked ? " · por tipo de vehículo" : "") : "Elija al menos un formato", fm.length, !fm.length);
+}
+function openStep(n){
+  $$(".step").forEach(st => st.classList.toggle("open", +st.dataset.s === n));
+  const el = document.querySelector(`.step[data-s="${n}"]`);
+  if (el) setTimeout(() => el.scrollIntoView({ block: "nearest", behavior: "smooth" }), 30);
+}
+$$(".step .sh").forEach(b => b.onclick = () => { const st = b.parentElement; st.classList.contains("open") ? st.classList.remove("open") : openStep(+st.dataset.s); });
+$$(".step .next").forEach(b => b.onclick = () => openStep(+b.closest(".step").dataset.s + 1));
 
 function locModel(L){ return Object.assign({}, L, { m: prepModel(L.tramo) }); }
 function binProbs(mu, sd, lim, bins){
@@ -1030,7 +1145,7 @@ function startMap(){
       const geoms = [];
       S.locs.filter(l => isFinite(l.lat) && isFinite(l.lon)).forEach(l => {
         if (l.tramo?.paths){ const g = new Polyline({ paths: l.tramo.paths, spatialReference: { wkid: 4326 } }); geoms.push(g);
-          gl.add(new Graphic({ geometry: g, symbol: { type: "simple-line", color: [15, 98, 254, .85], width: 6, marker: { style: "arrow", placement: "end", color: [15, 98, 254, 1] } } })); }
+          gl.add(new Graphic({ geometry: g, symbol: { type: "simple-line", color: [14, 140, 132, .9], width: 6, marker: { style: "arrow", placement: "end", color: [11, 37, 69, 1] } } })); }
         const p = new Point({ longitude: l.lon, latitude: l.lat }); geoms.push(p);
         gl.add(new Graphic({ geometry: p, symbol: { type: "simple-marker", size: 14, color: COL[l.status], outline: { color: "#fff", width: 2 } },
           popupTemplate: { title: `ID punto ${l.id}`, content: esc(l.tramo ? `${l.tramo.nombre} · ${l.tramo.sentido} · límite ${l.lim ?? "—"} km/h` : l.msg) } }));
@@ -1057,3 +1172,4 @@ window.__demo = { S, addLocation, buildQuery, runQuery, rowsFor, locModel, build
 <script src="exceso-iframe.js"></script>  
 </body>
 </html>
+
