@@ -123,7 +123,6 @@
   }
 </style>
 </head>
-<script src="exceso-iframe.js"></script>  
 <body>
 <div id="app">
   <aside id="panel">
@@ -1055,5 +1054,6 @@ renderMonths(); renderHours(); renderBins(); renderLocs(); renderHist(); startMa
 $("#oLanes").onchange = updateEstimate; $("#oTypes").onchange = updateEstimate; $$("#fmts input").forEach(i => i.onchange = updateEstimate);
 window.__demo = { S, addLocation, buildQuery, runQuery, rowsFor, locModel, build, renderLocs };
 </script>
+<script src="exceso-iframe.js"></script>  
 </body>
 </html>
