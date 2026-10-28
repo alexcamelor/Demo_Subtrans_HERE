@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
 <style>
   :root{
-    --bg:#f5f7fa; --panel:#ffffff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea;
-    --accent:#0f62fe; --accent-ink:#ffffff; --ok:#1a9850; --warn:#f7a600; --bad:#d73027;
+    --bg:#F3F5F8; --panel:#ffffff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea;
+    --accent:#0E8C84; --accent-soft:#E3F4F2; --navy:#0B2545; --accent-ink:#ffffff; --ok:#1a9850; --warn:#f7a600; --bad:#d73027;
     --radius:10px; --shadow:0 2px 10px rgba(16,24,40,.08);
     font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
@@ -19,14 +19,14 @@
   #viewWrap{position:relative;flex:1;min-width:0}
   #viewDiv{position:absolute;inset:0}
   header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-  header .t{font-weight:700;font-size:15px;line-height:1.2}
+  header .t{font-weight:700;font-size:15px;line-height:1.2;color:var(--navy)}
   header .s{font-size:12px;color:var(--muted)}
   #busy{margin-left:auto;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;visibility:hidden}
   #busy.on{visibility:visible}
   @keyframes spin{to{transform:rotate(360deg)}}
   nav.tabs{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--line);overflow-x:auto}
   nav.tabs button{flex:0 0 auto;border:0;background:transparent;padding:7px 8px;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;font-weight:600}
-  nav.tabs button.active{background:#e8f0ff;color:var(--accent)}
+  nav.tabs button.active{background:var(--accent-soft);color:var(--accent)}
   .tab{display:none;padding:12px 16px 16px;overflow-y:auto;flex:1}
   .tab.active{display:block}
   label.f{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
@@ -34,19 +34,21 @@
   .row > *{flex:1}
   .field{position:relative}
   input[type=text],input[type=number],input[type=datetime-local],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
-  input:focus,select:focus{outline:2px solid #b9cfff;border-color:var(--accent)}
+  input:focus,select:focus{outline:2px solid #9EDBD5;border-color:var(--accent)}
   .pick{flex:0 0 34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;display:grid;place-items:center}
-  .pick.armed{background:#e8f0ff;border-color:var(--accent)}
+  .pick.armed{background:var(--accent-soft);border-color:var(--accent)}
   .pick svg{width:16px;height:16px;stroke:var(--ink)}
   .btn{display:inline-block;width:100%;margin-top:12px;padding:9px 12px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:13px;cursor:pointer}
-  .btn.sec{background:#eef2f6;color:var(--ink)}
+  .btn.sec{background:#eef2f6;color:var(--navy)}
+  .btn:hover:not(:disabled){filter:brightness(.95)}
+  .card,.kpi,.rset{box-shadow:0 1px 4px rgba(11,37,69,.06)}
   .btn:disabled{opacity:.5;cursor:default}
   .chk{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:6px}
   .chk label{display:flex;gap:6px;align-items:center;cursor:pointer}
   .sugg{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:10;max-height:260px;overflow:auto}
   .sugg:empty{display:none}
   .sugg button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f2f5}
-  .sugg button:hover{background:#f3f7ff}
+  .sugg button:hover{background:var(--accent-soft)}
   .sugg small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
   .sugg .empty{padding:8px 10px;font-size:12px;color:var(--muted)}
   .cards{margin-top:12px;display:flex;flex-direction:column;gap:8px}
@@ -66,7 +68,7 @@
   .rhead .x{margin-left:auto;border:0;background:none;color:var(--bad);font-size:16px;cursor:pointer;line-height:1}
   .rod{font-size:11.5px;color:var(--muted);margin:3px 0 5px;line-height:1.35}
   .ralt{display:flex;gap:7px;align-items:flex-start;padding:4px 6px;border-radius:6px;font-size:12.5px}
-  .ralt.sel{background:#eef4ff}
+  .ralt.sel{background:var(--accent-soft)}
   .ralt .pick-alt{cursor:pointer;flex:1}
   .ralt small{display:block;color:var(--muted);font-size:11px}
   ol.steps{padding-left:18px;margin:10px 0 0;font-size:12.5px;line-height:1.45}
@@ -82,7 +84,7 @@
   .kpi .l{font-size:11px;color:var(--muted)}
   table.mx{border-collapse:collapse;width:100%;margin-top:12px;font-size:12px}
   table.mx th,table.mx td{border:1px solid var(--line);padding:5px 4px;text-align:center}
-  table.mx th{background:#f3f6f9}
+  table.mx th{background:var(--accent-soft);color:var(--navy)}
   table.mx td.d{color:#9aa5b1}
   .plist{margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
   .plist .p{display:flex;gap:6px;align-items:center}
@@ -247,7 +249,7 @@
 <div id="gate" hidden>
   <div class="box">
     <h2>Falta la API key de HERE</h2>
-    <p>Esta app lee la key desde la dirección: agrega <code>#k=TU_API_KEY</code> al final de la URL. En Experience Builder, pon la URL completa (con la key) en el widget <b>Insertar</b>.</p>
+    <p>Esta app lee la key desde la dirección: agrega <code>#k=TU_API_KEY</code> al final de la URL. En Experience Builder, pon la URL completa (con la key) en el widget <b>Integrar</b>.</p>
     <input type="text" id="gateKey" placeholder="Pega aquí la API key para probar">
     <button class="btn" id="gateGo">Abrir con esta key</button>
   </div>
@@ -497,7 +499,7 @@ require([
     "route.origin": { color: "#1a9850", label: "A" },
     "route.via": { color: "#f7a600", label: "V" },
     "route.destination": { color: "#d73027", label: "B" },
-    "iso.origin": { color: "#0f62fe", label: "" }
+    "iso.origin": { color: "#0B2545", label: "" }
   };
   const INPUT = { "route.origin": "#rOrigin", "route.via": "#rVia", "route.destination": "#rDest", "iso.origin": "#iOrigin" };
   function markerGraphics(p, color, label, tag){
@@ -570,7 +572,7 @@ require([
   });
 
   /* =====================  RUTAS (Routing v8)  ===================== */
-  const ROUTE_COLORS = ["#0f62fe", "#d12771", "#198038", "#8a3ffc", "#b28600", "#007d79", "#fa4d56", "#002d9c"];
+  const ROUTE_COLORS = ["#0E8C84", "#d12771", "#198038", "#8a3ffc", "#b28600", "#007d79", "#fa4d56", "#002d9c"];
   S.rsets = []; S.activeSet = null; let rsetN = 0;
   const optText = sel => sel.options[sel.selectedIndex].text;
   function depText(prefix){
@@ -746,7 +748,7 @@ require([
       geometry: new Point({ longitude: it.position.lng, latitude: it.position.lat }),
       attributes: { titulo: it.title, direccion: it.address?.label || "—", categoria: (it.categories || []).map(c => c.name).join(", ") || it.resultType || "—",
         telefono: it.contacts?.[0]?.phone?.[0]?.value || "—", distancia: it.distance != null ? fmtKm(it.distance) : "—" },
-      symbol: { type: "simple-marker", style: "circle", size: 12, color: "#0f62fe", outline: { color: "#fff", width: 2 } },
+      symbol: { type: "simple-marker", style: "circle", size: 12, color: "#0E8C84", outline: { color: "#fff", width: 2 } },
       popupTemplate: searchPopup
     }));
     searchLayer.addMany(gs);
@@ -851,3 +853,4 @@ require([
 </script>
 </body>
 </html>
+
