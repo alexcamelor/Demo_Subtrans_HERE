@@ -233,7 +233,7 @@
         <div class="it"><span class="swl" style="background:#f7c600"></span>Moderado (3–6)</div>
         <div class="it"><span class="swl" style="background:#f46d43"></span>Lento (6–9)</div>
         <div class="it"><span class="swl" style="background:#a50026"></span>Detenido (9–10)</div>
-        <div class="it"><span class="swl" style="background:#111"></span>Vía cerrada</div>
+        <div class="it"><span class="swl" id="swClosed" style="background:#111"></span>Vía cerrada</div>
       </div>
       <p class="hint">Fuente: HERE Traffic API v7 (datos de sondas GPS en tiempo real). Haz clic en un tramo o incidente para ver el detalle.</p>
     </section>
@@ -425,7 +425,9 @@ require([
     popup: { dockEnabled: false, dockOptions: { buttonEnabled: false } }
   });
   view.ui.add(new ScaleBar({ view, unit: "metric" }), "bottom-right");
-  bmSel.onchange = () => { map.basemap = makeBasemap(CFG.basemaps.find(b => b.style === bmSel.value)); };
+  const syncClosed = () => { const sw = document.getElementById("swClosed"); if (sw) sw.style.background = /night/.test(bmSel.value) ? "#f2f4f8" : "#111"; };
+  bmSel.onchange = () => { map.basemap = makeBasemap(CFG.basemaps.find(b => b.style === bmSel.value)); syncClosed(); };
+  syncClosed();
 
   const centerLL = () => ({ lat: view.center.latitude, lng: view.center.longitude });
   const wgs = { wkid: 4326 };
@@ -766,7 +768,9 @@ require([
   });
 
   /* =====================  TRÁFICO (Traffic v7)  ===================== */
-  const jamColor = (jf, closed) => closed ? "#111111" : jf < 3 ? "#1a9850" : jf < 6 ? "#f7c600" : jf < 9 ? "#f46d43" : "#a50026";
+  const isDark = () => /night/.test(bmSel.value);
+  const closedColor = () => isDark() ? "#f2f4f8" : "#111111";
+  const jamColor = (jf, closed) => closed ? closedColor() : jf < 3 ? "#1a9850" : jf < 6 ? "#f7c600" : jf < 9 ? "#f46d43" : "#a50026";
   function viewBbox(maxDeg){
     const e = webMercatorUtils.webMercatorToGeographic(view.extent);
     if ((e.xmax - e.xmin) > maxDeg || (e.ymax - e.ymin) > maxDeg) return null;
@@ -823,7 +827,7 @@ require([
           inicio: d.startTime ? new Date(d.startTime).toLocaleString("es-CL") : "—", fin: d.endTime ? new Date(d.endTime).toLocaleString("es-CL") : "—" };
         const paths = (loc.shape?.links || []).map(lk => lk.points.map(pt => [pt.lng, pt.lat])).filter(p => p.length > 1);
         if (paths.length) incLayer.add(new Graphic({ geometry: new Polyline({ paths, spatialReference: wgs }), attributes: attrs, popupTemplate: incPopup,
-          symbol: { type: "simple-line", color: d.roadClosed ? "#111" : col, width: 6, style: d.roadClosed ? "short-dash" : "solid" } }));
+          symbol: { type: "simple-line", color: d.roadClosed ? closedColor() : col, width: 6, style: d.roadClosed ? "short-dash" : "solid" } }));
         const first = loc.shape?.links?.[0]?.points?.[0];
         if (first) incLayer.add(new Graphic({ geometry: new Point({ longitude: first.lng, latitude: first.lat }), attributes: attrs, popupTemplate: incPopup,
           symbol: { type: "simple-marker", style: "diamond", size: 14, color: col, outline: { color: "#fff", width: 1.5 } } }));
@@ -853,4 +857,6 @@ require([
 </script>
 </body>
 </html>
+
+
 
