@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Consulta de Exceso de Velocidad · Demo</title>
-<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<link id="esriCss" rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<script>(function(){var m=(location.hash+'&'+location.search).match(/[#&?]theme=(\w+)/);window.__DARK=!m||m[1]!=='light';if(window.__DARK){document.documentElement.classList.add('dark');var l=document.getElementById('esriCss');if(l)l.href=l.href.replace('/light/','/dark/');}})();</script>
 <style>
   :root{
+    --card:#fff; --soft2:#eef2f6; --title:#0B2545; --t-warn:#fff4e0; --t-bad:#fdecea; --t-ok:#e6f4ea; --t-sim:#efe7fb; --t-info:#e8f0ff;
     --bg:#F3F5F8; --panel:#fff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea; --soft:#f1f5f7;
     --accent:#0E8C84; --accent-soft:#E3F4F2; --navy:#0B2545; --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --sim:#7a4cc2;
     --radius:10px; --shadow:0 2px 10px rgba(16,24,40,.08);
@@ -20,7 +22,7 @@
   header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
   header .t{font-weight:700;font-size:15px}
   header .s{font-size:12px;color:var(--muted)}
-  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:#efe7fb;color:var(--sim);vertical-align:middle;margin-left:6px}
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--t-sim);color:var(--sim);vertical-align:middle;margin-left:6px}
   #busy{margin-left:auto;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;visibility:hidden;flex:0 0 16px}
   #busy.on{visibility:visible}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -29,19 +31,19 @@
   h3{font-size:13.5px;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
   h3 .n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;flex:0 0 22px}
   label.f{display:block;font-size:11.5px;color:var(--muted);margin:8px 0 3px;font-weight:600}
-  input[type=text],input[type=number],input[type=email],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink);font-family:inherit}
+  input[type=text],input[type=number],input[type=email],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--card);color:var(--ink);font-family:inherit}
   textarea{min-height:70px;font-family:Consolas,monospace;font-size:12px}
   input:focus,select:focus,textarea:focus{outline:2px solid #9EDBD5;border-color:var(--accent)}
   .row{display:flex;gap:6px;align-items:flex-end}
   .row>*{flex:1;min-width:0}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;cursor:pointer}
-  .btn.sec{background:#eef2f6;color:var(--ink)}
+  .btn.sec{background:var(--soft2);color:var(--ink)}
   .btn.sm{padding:5px 9px;font-size:12px}
   .btn.full{width:100%;margin-top:10px}
   .btn:disabled{opacity:.5;cursor:default}
-  .seg{display:flex;background:#eef2f6;border-radius:8px;padding:3px;gap:2px;margin-bottom:6px}
+  .seg{display:flex;background:var(--soft2);border-radius:8px;padding:3px;gap:2px;margin-bottom:6px}
   .seg button{flex:1;border:0;background:transparent;padding:6px;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
-  .seg button.on{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .seg button.on{background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
   .pane{display:none}.pane.on{display:block}
   .locs{display:flex;flex-direction:column;gap:6px;margin-top:10px}
   .loc{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;font-size:12.5px}
@@ -53,12 +55,12 @@
   .loc .lim input{width:74px;padding:4px 6px}
   .loc .msg{margin-top:5px;font-size:12px;line-height:1.35}
   .chip{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
-  .chip.ok{background:#e6f4ea;color:var(--ok)} .chip.warn{background:#fff4e0;color:var(--warn)} .chip.err{background:#fdecea;color:var(--bad)} .chip.pend{background:#eef2f6;color:var(--muted)}
+  .chip.ok{background:var(--t-ok);color:var(--ok)} .chip.warn{background:var(--t-warn);color:var(--warn)} .chip.err{background:var(--t-bad);color:var(--bad)} .chip.pend{background:var(--soft2);color:var(--muted)}
   .msg.warn{color:var(--warn)} .msg.err{color:var(--bad)}
   .months{margin-top:6px;display:flex;flex-direction:column;gap:4px}
   .yr{display:flex;align-items:center;gap:3px}
   .yr b{width:38px;font-size:12px;cursor:pointer}
-  .yr button{flex:1;border:1px solid var(--line);background:#fff;border-radius:5px;font-size:10.5px;padding:4px 0;cursor:pointer;color:var(--ink)}
+  .yr button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:5px;font-size:10.5px;padding:4px 0;cursor:pointer;color:var(--ink)}
   .yr button.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .yr button:disabled{opacity:.3;cursor:default}
   .quick{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
@@ -78,10 +80,10 @@
   main{flex:1;min-width:0;display:flex;flex-direction:column}
   #viewWrap{position:relative;height:42%;min-height:220px;border-bottom:1px solid var(--line)}
   #viewDiv{position:absolute;inset:0}
-  #bottom{flex:1;min-height:0;display:flex;flex-direction:column;background:#fff}
+  #bottom{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card)}
   #bottom nav{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line)}
   #bottom nav button{border:0;background:transparent;padding:6px 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
-  #bottom nav button.on{background:#e8f0ff;color:var(--accent)}
+  #bottom nav button.on{background:var(--t-info);color:var(--accent)}
   .bpane{display:none;overflow:auto;padding:12px 14px;flex:1}
   .bpane.on{display:block}
   table.prev{border-collapse:collapse;font-size:12px;white-space:nowrap}
@@ -110,7 +112,7 @@
   #toast.on{opacity:1}
   #modal{position:fixed;inset:0;background:rgba(16,24,40,.45);display:grid;place-items:center;z-index:70;padding:16px}
   #modal[hidden]{display:none}
-  #modal .box{background:#fff;border-radius:14px;max-width:480px;width:100%;padding:20px;box-shadow:var(--shadow)}
+  #modal .box{background:var(--card);border-radius:14px;max-width:480px;width:100%;padding:20px;box-shadow:var(--shadow)}
   #modal h2{margin:0 0 8px;font-size:17px}
   #modal p{font-size:13px;line-height:1.5;color:var(--ink)}
   .prog{height:8px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:10px}
@@ -122,17 +124,17 @@
     main{min-height:90vh}
   }
   /* ===== Tema Demo Subtrans (igual al Experience Builder) ===== */
-  header{background:#fff}
-  header .t{color:var(--navy)}
+  header{background:var(--card)}
+  header .t{color:var(--title)}
   #panel{width:400px}
   #panelBody{padding:4px 14px 14px;background:var(--bg)}
-  #src{background:#fff}
-  .step{background:#fff;border:1px solid var(--line);border-radius:12px;margin-top:10px;transition:box-shadow .15s,border-color .15s}
+  #src{background:var(--card)}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-top:10px;transition:box-shadow .15s,border-color .15s}
   .step.open{border-color:var(--accent);box-shadow:0 4px 14px rgba(11,37,69,.08)}
   .step .sh{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:0;background:transparent;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);border-radius:12px}
   .step .sh:hover{background:var(--accent-soft)}
   .step.open .sh:hover{background:transparent}
-  .step .n{width:24px;height:24px;border-radius:50%;background:#e6ebf1;color:var(--navy);display:grid;place-items:center;font-size:12px;font-weight:700;flex:0 0 24px}
+  .step .n{width:24px;height:24px;border-radius:50%;background:var(--soft2);color:var(--title);display:grid;place-items:center;font-size:12px;font-weight:700;flex:0 0 24px}
   .step.open .n{background:var(--accent);color:#fff}
   .step.done:not(.open) .n{background:var(--ok);color:#fff;font-size:0}
   .step.done:not(.open) .n::after{content:"✓";font-size:13px}
@@ -147,8 +149,8 @@
   .step.open .sb{display:block}
   .nx{display:flex;justify-content:flex-end;margin-top:12px}
   .yrs{display:flex;gap:3px;flex-wrap:wrap;margin-top:10px}
-  .yrs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 7px;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--ink);font-family:inherit}
-  .yrs button.cur{background:var(--navy);border-color:var(--navy);color:#fff}
+  .yrs button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 7px;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--ink);font-family:inherit}
+  .yrs button.cur{background:var(--navy);border-color:var(--title);color:#fff}
   .yrs button i{font-style:normal;font-size:9.5px;background:var(--accent);color:#fff;border-radius:999px;padding:0 4px;margin-left:3px}
   .yrfoot{display:flex;justify-content:flex-end;margin-top:4px}
   .all{border:0;background:none;color:var(--accent);font-size:12px;padding:2px;cursor:pointer;font-family:inherit}
@@ -163,13 +165,13 @@
   .loc .top{flex-wrap:wrap}
   .loc .top b{white-space:nowrap}
   .loc .top>span:not(.chip){flex:1 1 150px;font-size:11.5px}
-  #panelFoot{border-top:1px solid var(--line);padding:10px 14px 12px;background:#fff;box-shadow:0 -4px 12px rgba(11,37,69,.05)}
+  #panelFoot{border-top:1px solid var(--line);padding:10px 14px 12px;background:var(--card);box-shadow:0 -4px 12px rgba(11,37,69,.05)}
   #panelFoot .est{margin-top:0;background:var(--accent-soft)}
   #panelFoot .btn.full{margin-top:8px;padding:10px 12px;font-size:14px}
   .est .errs{color:var(--bad);margin-top:3px}
   .est .errs span{color:var(--muted)}
   .btn:hover:not(:disabled){filter:brightness(.95)}
-  .btn.sec{background:#eef2f6;color:var(--navy)}
+  .btn.sec{background:var(--soft2);color:var(--title)}
   #viewWrap{height:52%}
   #bottom nav button.on{background:var(--accent-soft);color:var(--accent)}
   .seg button.on{color:var(--accent)}
@@ -177,6 +179,23 @@
   @media (max-width:860px){
     #panelFoot{position:sticky;bottom:0;z-index:5}
   }
+
+  /* ===== Tema oscuro (por defecto; #theme=light vuelve al claro) ===== */
+  html.dark{color-scheme:dark}
+  html.dark{
+    --bg:#0F1722; --panel:#16202E; --card:#1E2A3A; --ink:#E6EBF2; --muted:#9AA8BA; --line:#2E3B4E;
+    --soft:#243246; --soft2:#2A384C; --title:#F2F5F9; --navy:#0E8C84;
+    --accent:#13A89E; --accent-soft:rgba(19,168,158,.16);
+    --ok:#4ade80; --warn:#f5b041; --bad:#ff6b6b; --sim:#b794f6;
+    --t-warn:rgba(224,138,0,.18); --t-bad:rgba(255,77,94,.18); --t-ok:rgba(46,204,113,.16); --t-sim:rgba(150,110,230,.22); --t-info:rgba(77,163,255,.18);
+    --shadow:0 2px 10px rgba(0,0,0,.35);
+  }
+  html.dark a{color:#4fd1c5}
+  html.dark .tag.alta{color:#ff8a98} html.dark .tag.media{color:#ffb35c}
+  html.dark .kpi.hot b{color:#ff5c74}
+  html.dark input:focus, html.dark select:focus, html.dark textarea:focus{outline-color:#13A89E}
+  html.dark ::placeholder{color:#6f7f93}
+  html.dark .esri-widget, html.dark .esri-widget--button{background-color:#16202E;color:#E6EBF2}
 </style>
 </head>
 <body>
@@ -190,7 +209,7 @@
       <div id="busy"></div>
     </header>
     <div id="src">Fuente de tramos: <b>…</b></div>
-    <div id="framed" hidden style="font-size:11.5px;padding:6px 16px;background:#fff8e6;border-bottom:1px solid var(--line)">¿No se descargan los archivos? <a href="#" id="openTab">Abrir el módulo en una pestaña nueva</a></div>
+    <div id="framed" hidden style="font-size:11.5px;padding:6px 16px;background:var(--t-warn);border-bottom:1px solid var(--line)">¿No se descargan los archivos? <a href="#" id="openTab">Abrir el módulo en una pestaña nueva</a></div>
     <div id="panelBody">
 
       <section class="step open" data-s="1">
@@ -1136,7 +1155,7 @@ function startMap(){
   s.onload = () => require(["esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/WebTileLayer", "esri/layers/GraphicsLayer", "esri/Graphic", "esri/geometry/Point", "esri/geometry/Polyline"],
   (Map, MapView, Basemap, WebTileLayer, GraphicsLayer, Graphic, Point, Polyline) => {
     const key = encodeURIComponent(P.k);
-    const basemap = new Basemap({ baseLayers: [new WebTileLayer({ urlTemplate: `https://maps.hereapi.com/v3/base/mc/{level}/{col}/{row}/png8?size=256&style=lite.day&lang=es&apiKey=${key}`, copyright: "© HERE" })] });
+    const basemap = new Basemap({ baseLayers: [new WebTileLayer({ urlTemplate: `https://maps.hereapi.com/v3/base/mc/{level}/{col}/{row}/png8?size=256&style=${window.__DARK?'lite.night':'lite.day'}&lang=es&apiKey=${key}`, copyright: "© HERE" })] });
     const gl = new GraphicsLayer();
     const view = new MapView({ container: "viewDiv", map: new Map({ basemap, layers: [gl] }), center: [-70.65, -33.45], zoom: 11 });
     const COL = { ok: "#1a7f37", warn: "#e08a00", err: "#c62828", pend: "#8a99ad" };
@@ -1172,4 +1191,6 @@ window.__demo = { S, addLocation, buildQuery, runQuery, rowsFor, locModel, build
 <script src="exceso-iframe.js"></script>  
 </body>
 </html>
+
+
 
