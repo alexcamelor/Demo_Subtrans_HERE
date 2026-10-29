@@ -124,7 +124,7 @@
 <script>
 const SVC = "https://services7.arcgis.com/SttFSSHZYXsO8qIk/arcgis/rest/services/Demo_Subtrans_HERE/FeatureServer/";
 const HP = new URLSearchParams(location.hash.replace(/^#/, ""));
-const P = { k: HP.get("k"), bm: HP.get("bm") || "lite.night", lat: +HP.get("lat") || -33.45, lng: +HP.get("lng") || -70.65, z: +HP.get("z") || 14 };
+const P = { k: HP.get("k"), bm: HP.get("bm") || "explore.night", lat: +HP.get("lat") || -33.45, lng: +HP.get("lng") || -70.65, z: +HP.get("z") || 14 };
 const $ = s => document.querySelector(s);
 const nf = n => Number(n || 0).toLocaleString("es-CL");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -275,3 +275,4 @@ function start(){ require([
 </script>
 </body>
 </html>
+
