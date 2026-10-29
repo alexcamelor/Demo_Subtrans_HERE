@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Geoservicio HERE · Demo</title>
-<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<link id="esriCss" rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<script>(function(){var m=(location.hash+'&'+location.search).match(/[#&?]theme=(\w+)/);window.__DARK=!m||m[1]!=='light';if(window.__DARK){document.documentElement.classList.add('dark');var l=document.getElementById('esriCss');if(l)l.href=l.href.replace('/light/','/dark/');}})();</script>
 <style>
   :root{
+    --card:#fff; --soft2:#eef2f6; --title:#0B2545; --t-warn:#fff4e0; --t-bad:#fdecea; --t-ok:#e6f4ea; --t-sim:#efe7fb; --t-info:#e8f0ff;
     --bg:#F3F5F8; --panel:#ffffff; --ink:#1b2430; --muted:#5c6b7d; --line:#dde3ea;
     --accent:#0E8C84; --accent-soft:#E3F4F2; --navy:#0B2545; --accent-ink:#ffffff; --ok:#1a9850; --warn:#f7a600; --bad:#d73027;
     --radius:10px; --shadow:0 2px 10px rgba(16,24,40,.08);
@@ -19,7 +21,7 @@
   #viewWrap{position:relative;flex:1;min-width:0}
   #viewDiv{position:absolute;inset:0}
   header{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-  header .t{font-weight:700;font-size:15px;line-height:1.2;color:var(--navy)}
+  header .t{font-weight:700;font-size:15px;line-height:1.2;color:var(--title)}
   header .s{font-size:12px;color:var(--muted)}
   #busy{margin-left:auto;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;visibility:hidden}
   #busy.on{visibility:visible}
@@ -33,26 +35,26 @@
   .row{display:flex;gap:6px;align-items:center}
   .row > *{flex:1}
   .field{position:relative}
-  input[type=text],input[type=number],input[type=datetime-local],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
+  input[type=text],input[type=number],input[type=datetime-local],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--card);color:var(--ink)}
   input:focus,select:focus{outline:2px solid #9EDBD5;border-color:var(--accent)}
-  .pick{flex:0 0 34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;display:grid;place-items:center}
+  .pick{flex:0 0 34px;height:34px;border:1px solid var(--line);background:var(--card);border-radius:8px;cursor:pointer;display:grid;place-items:center}
   .pick.armed{background:var(--accent-soft);border-color:var(--accent)}
   .pick svg{width:16px;height:16px;stroke:var(--ink)}
   .btn{display:inline-block;width:100%;margin-top:12px;padding:9px 12px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:13px;cursor:pointer}
-  .btn.sec{background:#eef2f6;color:var(--navy)}
+  .btn.sec{background:var(--soft2);color:var(--title)}
   .btn:hover:not(:disabled){filter:brightness(.95)}
   .card,.kpi,.rset{box-shadow:0 1px 4px rgba(11,37,69,.06)}
   .btn:disabled{opacity:.5;cursor:default}
   .chk{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:6px}
   .chk label{display:flex;gap:6px;align-items:center;cursor:pointer}
-  .sugg{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:10;max-height:260px;overflow:auto}
+  .sugg{position:absolute;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:10;max-height:260px;overflow:auto}
   .sugg:empty{display:none}
-  .sugg button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f2f5}
+  .sugg button{display:block;width:100%;text-align:left;border:0;background:var(--card);padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--soft2)}
   .sugg button:hover{background:var(--accent-soft)}
   .sugg small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
   .sugg .empty{padding:8px 10px;font-size:12px;color:var(--muted)}
   .cards{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-  .card{border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;cursor:pointer;background:#fff}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;cursor:pointer;background:var(--card)}
   .card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
   .card .big{font-size:18px;font-weight:700}
   .card .meta{font-size:12px;color:var(--muted);margin-top:2px}
@@ -60,7 +62,7 @@
   .delay.ok{color:var(--ok)} .delay.warn{color:#b26b00} .delay.bad{color:var(--bad)}
   .rtools{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;margin-bottom:2px}
   .lnk{border:0;background:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0}
-  .rset{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;background:#fff}
+  .rset{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;background:var(--card)}
   .rset.act{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
   .rhead{display:flex;align-items:center;gap:8px;font-size:13px}
   .rhead label{display:flex;align-items:center;gap:6px;cursor:pointer}
@@ -84,7 +86,7 @@
   .kpi .l{font-size:11px;color:var(--muted)}
   table.mx{border-collapse:collapse;width:100%;margin-top:12px;font-size:12px}
   table.mx th,table.mx td{border:1px solid var(--line);padding:5px 4px;text-align:center}
-  table.mx th{background:var(--accent-soft);color:var(--navy)}
+  table.mx th{background:var(--accent-soft);color:var(--title)}
   table.mx td.d{color:#9aa5b1}
   .plist{margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
   .plist .p{display:flex;gap:6px;align-items:center}
@@ -93,16 +95,16 @@
   .plist .p button{border:0;background:transparent;color:var(--bad);cursor:pointer;font-size:14px}
   .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .chips button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer}
   .chips button:hover{border-color:var(--accent);color:var(--accent)}
   footer{padding:8px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
-  #bmBox{position:absolute;top:12px;right:12px;z-index:3;background:#fff;border-radius:8px;box-shadow:var(--shadow)}
+  #bmBox{position:absolute;top:12px;right:12px;z-index:3;background:var(--card);border-radius:8px;box-shadow:var(--shadow)}
   #bmBox select{border:0;padding:8px 10px;font-weight:600}
   #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1b2430;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;max-width:min(90vw,520px);box-shadow:var(--shadow);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
   #toast.on{opacity:1}
   #gate{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:100;padding:16px}
   #gate[hidden]{display:none}
-  #gate .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;max-width:440px;width:100%;box-shadow:var(--shadow)}
+  #gate .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;max-width:440px;width:100%;box-shadow:var(--shadow)}
   #gate h2{margin:0 0 6px;font-size:18px}
   #gate p{font-size:13px;color:var(--muted);line-height:1.45}
   @media (max-width:760px){
@@ -110,6 +112,23 @@
     #panel{width:100%;min-width:0;height:52%;border-right:0;border-top:1px solid var(--line)}
     #viewWrap{height:48%;flex:none}
   }
+
+  /* ===== Tema oscuro (por defecto; #theme=light vuelve al claro) ===== */
+  html.dark{color-scheme:dark}
+  html.dark{
+    --bg:#0F1722; --panel:#16202E; --card:#1E2A3A; --ink:#E6EBF2; --muted:#9AA8BA; --line:#2E3B4E;
+    --soft:#243246; --soft2:#2A384C; --title:#F2F5F9; --navy:#0E8C84;
+    --accent:#13A89E; --accent-soft:rgba(19,168,158,.16);
+    --ok:#4ade80; --warn:#f5b041; --bad:#ff6b6b; --sim:#b794f6;
+    --t-warn:rgba(224,138,0,.18); --t-bad:rgba(255,77,94,.18); --t-ok:rgba(46,204,113,.16); --t-sim:rgba(150,110,230,.22); --t-info:rgba(77,163,255,.18);
+    --shadow:0 2px 10px rgba(0,0,0,.35);
+  }
+  html.dark a{color:#4fd1c5}
+  html.dark .tag.alta{color:#ff8a98} html.dark .tag.media{color:#ffb35c}
+  html.dark .kpi.hot b{color:#ff5c74}
+  html.dark input:focus, html.dark select:focus, html.dark textarea:focus{outline-color:#13A89E}
+  html.dark ::placeholder{color:#6f7f93}
+  html.dark .esri-widget, html.dark .esri-widget--button{background-color:#16202E;color:#E6EBF2}
 </style>
 </head>
 <body>
@@ -405,7 +424,7 @@ require([
   /* ---- Mapa ---- */
   const bmSel = $("#bmSel");
   CFG.basemaps.forEach(b => bmSel.insertAdjacentHTML("beforeend", `<option value="${b.style}">${esc(b.label)}</option>`));
-  const startBm = CFG.basemaps.find(b => b.style === P.bm) || CFG.basemaps[0];
+  const startBm = CFG.basemaps.find(b => b.style === (P.bm || (window.__DARK ? "explore.night" : ""))) || CFG.basemaps[0];
   bmSel.value = startBm.style;
 
   const trafficTiles = new WebTileLayer({ urlTemplate: tileUrl(CFG.tiles.traffic, {}), visible: false, opacity: .9, title: "Tráfico HERE" });
