@@ -142,7 +142,7 @@ function start(){ require([
 
   const key = encodeURIComponent(P.k);
   const basemap = new Basemap({ baseLayers: P.k ? [new WebTileLayer({
-    urlTemplate: `https://maps.hereapi.com/v3/base/mc/{level}/{col}/{row}/png8?size=256&style=${encodeURIComponent(P.bm)}&lang=es&apiKey=${key}`, copyright: "© HERE" })] : [] });
+    urlTemplate: `https://maps.hereapi.com/v3/base/mc/{level}/{col}/{row}/png8?size=256&style=${encodeURIComponent(P.bm)}&lang=es&features=pois:disabled&apiKey=${key}`, copyright: "© HERE" })] : [] });
 
   const sevRenderer = { type: "unique-value", field: "gravedad",
     uniqueValueInfos: SEV.slice().reverse().map(([v, , hex, size]) => ({ value: v, label: v,
