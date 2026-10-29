@@ -77,8 +77,8 @@
       <div class="state" id="state"><span class="dot"></span><span id="stateTxt">Mueva el mouse sobre el mapa. Clic para fijar el círculo.</span><button id="release" hidden>Soltar</button></div>
 
       <div class="card">
-        <label class="f">Radio de análisis <b id="rTxt">400 m</b></label>
-        <input type="range" id="radius" min="100" max="2000" step="50" value="400">
+        <label class="f">Radio de análisis <b id="rTxt">500 m</b></label>
+        <input type="range" id="radius" min="100" max="2000" step="50" value="500">
         <h4 style="margin-top:10px">Años</h4>
         <div class="chips" id="years"></div>
         <h4 style="margin-top:10px">Gravedad</h4>
@@ -124,7 +124,7 @@
 <script>
 const SVC = "https://services7.arcgis.com/SttFSSHZYXsO8qIk/arcgis/rest/services/Demo_Subtrans_HERE/FeatureServer/";
 const HP = new URLSearchParams(location.hash.replace(/^#/, ""));
-const P = { k: HP.get("k"), bm: HP.get("bm") || "lite.night", lat: +HP.get("lat") || -33.45, lng: +HP.get("lng") || -70.65, z: +HP.get("z") || 13 };
+const P = { k: HP.get("k"), bm: HP.get("bm") || "lite.night", lat: +HP.get("lat") || -33.45, lng: +HP.get("lng") || -70.65, z: +HP.get("z") || 14 };
 const $ = s => document.querySelector(s);
 const nf = n => Number(n || 0).toLocaleString("es-CL");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -137,8 +137,8 @@ let bN = 0; const busy = on => { bN += on ? 1 : -1; $("#busy").classList.toggle(
 
 function start(){ require([
   "esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/WebTileLayer", "esri/layers/FeatureLayer", "esri/layers/GraphicsLayer",
-  "esri/Graphic", "esri/geometry/Circle", "esri/layers/support/FeatureEffect", "esri/layers/support/FeatureFilter", "esri/widgets/ScaleBar"
-], (Map, MapView, Basemap, WebTileLayer, FeatureLayer, GraphicsLayer, Graphic, Circle, FeatureEffect, FeatureFilter, ScaleBar) => {
+  "esri/Graphic", "esri/geometry/Circle", "esri/layers/support/FeatureEffect", "esri/layers/support/FeatureFilter", "esri/widgets/ScaleBar", "esri/layers/support/TileInfo"
+], (Map, MapView, Basemap, WebTileLayer, FeatureLayer, GraphicsLayer, Graphic, Circle, FeatureEffect, FeatureFilter, ScaleBar, TileInfo) => {
 
   const key = encodeURIComponent(P.k);
   const basemap = new Basemap({ baseLayers: P.k ? [new WebTileLayer({
@@ -153,18 +153,18 @@ function start(){ require([
     popupTemplate: { title: "{tipo} · {gravedad}", content: "<b>Fecha:</b> {fecha}<br><b>Hora:</b> {hora} h · {dia_semana}<br><b>Dirección:</b> {direccion}<br><b>Causa:</b> {causa_detalle}<br><b>Fallecidos:</b> {fallecidos} · <b>Graves:</b> {graves} · <b>Lesionados:</b> {lesionados}",
       fieldInfos: [{ fieldName: "fecha", format: { dateFormat: "short-date" } }] },
     orderBy: [{ valueExpression: "When($feature.gravedad=='Con fallecidos',4,$feature.gravedad=='Con lesionados graves',3,$feature.gravedad=='Con lesionados',2,1)", order: "ascending" }] });
-  const tramosLayer = new FeatureLayer({ url: SVC + "3", definitionExpression: "prioridad IN ('Alta','Media')", outFields: ["*"], title: "Tramos prioritarios",
+  const tramosLayer = new FeatureLayer({ url: SVC + "3", definitionExpression: "prioridad IN ('Alta','Media')", outFields: ["*"], title: "Tramos prioritarios", minScale: 0, maxScale: 0,
     renderer: { type: "unique-value", field: "prioridad", uniqueValueInfos: [
       { value: "Alta", symbol: { type: "simple-line", color: "#ff4d5e", width: 3.2 } },
       { value: "Media", symbol: { type: "simple-line", color: "#ff9a3c", width: 2 } }] },
     popupTemplate: { title: "{nombre_via}", content: "Prioridad <b>{prioridad}</b> ({indice_prioridad}/100)<br>Límite {vel_normada} km/h · velocidad promedio {vel_promedio} km/h<br>Siniestros 2020-2025: {sin_total} · fallecidos {sin_fallecidos}<br>Tramo {id_tramo}" } });
   const camLayer = new FeatureLayer({ url: SVC + "2", title: "Cámaras",
-    renderer: { type: "simple", symbol: { type: "simple-marker", style: "square", size: 8, color: "#3fd0ff", outline: { color: "#0B2545", width: 1 } } },
+    renderer: { type: "simple", symbol: { type: "simple-marker", style: "square", size: 6.5, color: [63, 208, 255, 0.9], outline: { color: [11, 37, 69, 0.9], width: 0.8 } } },
     popupTemplate: { title: "Cámara de fiscalización", content: "{STREET_NAME} · límite {CAMERA_SPEED_LIMIT} km/h" } });
   const ring = new GraphicsLayer({ title: "Radio" });
 
   const map = new Map({ basemap, layers: [tramosLayer, sinLayer, camLayer, ring] });
-  const view = new MapView({ container: "viewDiv", map, background: { color: "#16202e" }, center: [P.lng, P.lat], zoom: P.z, constraints: { minZoom: 9, snapToZoom: false },
+  const view = new MapView({ container: "viewDiv", map, background: { color: "#16202e" }, center: [P.lng, P.lat], zoom: P.z, constraints: { lods: TileInfo.create().lods, minZoom: 9, snapToZoom: false },
     popup: { dockEnabled: false } });
   view.ui.add(new ScaleBar({ view, unit: "metric" }), "bottom-right");
 
@@ -184,10 +184,11 @@ function start(){ require([
   $("#onlySpeed").onchange = e => { F.speed = e.target.checked; applyFilters(); };
 
   /* ---------- círculo que sigue al mouse ---------- */
-  let radius = 400, center = null, fixed = false, sinLV = null, trLV = null;
+  let radius = 500, center = null, fixed = false, sinLV = null, trLV = null, camLV = null;
   $("#radius").oninput = e => { radius = +e.target.value; $("#rTxt").textContent = radius >= 1000 ? (radius / 1000).toLocaleString("es-CL") + " km" : radius + " m"; if (center) draw(center, true); };
   view.whenLayerView(sinLayer).then(lv => sinLV = lv);
   view.whenLayerView(tramosLayer).then(lv => trLV = lv);
+  view.whenLayerView(camLayer).then(lv => camLV = lv);
 
   function circle(c){ return new Circle({ center: c, radius, radiusUnit: "meters", geodesic: true }); }
   function draw(c, withStats){
@@ -198,7 +199,8 @@ function start(){ require([
       outline: { color: fixed ? [255, 196, 0, 0.95] : [255, 255, 255, 0.85], width: 1.6, style: fixed ? "solid" : "dash" } } }));
     const filter = new FeatureFilter({ geometry: g, spatialRelationship: "intersects" });
     if (sinLV) sinLV.featureEffect = new FeatureEffect({ filter, includedEffect: "drop-shadow(0px, 0px, 3px rgba(255,255,255,0.35))", excludedEffect: "opacity(12%) grayscale(70%)" });
-    if (trLV) trLV.featureEffect = new FeatureEffect({ filter, excludedEffect: "opacity(25%)" });
+    if (trLV) trLV.featureEffect = new FeatureEffect({ filter, excludedEffect: "opacity(30%)" });
+    if (camLV) camLV.featureEffect = new FeatureEffect({ filter, excludedEffect: "opacity(30%)" });
     if (withStats) queueStats();
   }
   let raf = 0;
@@ -207,7 +209,7 @@ function start(){ require([
     if (raf) return;
     raf = requestAnimationFrame(() => { raf = 0; const p = view.toMap({ x: ev.x, y: ev.y }); if (p) draw(p, true); });
   });
-  view.on("pointer-leave", () => { if (!fixed){ ring.removeAll(); if (sinLV) sinLV.featureEffect = null; if (trLV) trLV.featureEffect = null; } });
+  view.on("pointer-leave", () => { if (!fixed){ ring.removeAll(); if (sinLV) sinLV.featureEffect = null; if (trLV) trLV.featureEffect = null; if (camLV) camLV.featureEffect = null; } });
   view.on("click", ev => {
     ev.stopPropagation();
     fixed = !fixed;
@@ -268,7 +270,7 @@ function start(){ require([
   view.on("pointer-move", ev => { tip.style.display = fixed ? "none" : "block"; tip.style.left = ev.x + "px"; tip.style.top = ev.y + "px"; tip.textContent = `Radio ${$("#rTxt").textContent}`; });
   view.on("pointer-leave", () => tip.style.display = "none");
 
-  view.when(() => draw(view.center, true));
+  Promise.all([view.when(), view.whenLayerView(sinLayer), view.whenLayerView(tramosLayer), view.whenLayerView(camLayer)]).then(() => draw(view.center, true)).catch(() => draw(view.center, true));
 });}
 </script>
 </body>
