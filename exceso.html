@@ -310,6 +310,8 @@
           <div class="chk" style="margin-top:10px">
             <label><input type="checkbox" id="oLanes" checked><span>Incluir cantidad de pistas<small>Funcionalidad opcional 1 · dato HERE por sentido</small></span></label>
             <label><input type="checkbox" id="oTypes"><span>Desglosar por tipo de vehículo<small>Funcionalidad opcional 2 · livianos, buses y camiones</small></span></label>
+            <label><input type="checkbox" id="oV85" checked><span>Incluir V85 con y sin demora<small>Variable de interés · V85 del tramo horario vs. V85 a flujo libre y su exceso sobre el límite</small></span></label>
+            <label><input type="checkbox" id="oConf" checked><span>Incluir índice de confianza<small>Variable de interés · 0 a 100 según tamaño muestral del tramo horario</small></span></label>
           </div>
           <label class="f">Correo para notificar consultas masivas</label>
           <input type="email" id="oMail" placeholder="analista@mtt.gob.cl">
@@ -864,7 +866,7 @@ function buildQuery(){
   const days = months.reduce((a, k) => a + daysOf(k).length, 0);
   const rows = locs.length * days * (hb.bins?.length || 0);
   return { errs, q: { locs: locs.map(l => ({ id: l.id, lat: l.lat, lon: l.lon, rumbo: l.rumbo, lim: l.lim, tramo: Object.assign({}, l.tramo, { paths: null }) })),
-    months, hours: hb.bins, bins: S.bins.map(b => b.slice()), fmts, lanes: $("#oLanes").checked, types: $("#oTypes").checked, mail: $("#oMail").value.trim() }, rows,
+    months, hours: hb.bins, bins: S.bins.map(b => b.slice()), fmts, lanes: $("#oLanes").checked, types: $("#oTypes").checked, v85: $("#oV85").checked, conf: $("#oConf").checked, mail: $("#oMail").value.trim() }, rows,
     excluded: S.locs.filter(l => l.status === "err").length };
 }
 const RAPIDA = 100000, MAXROWS = 1000000;
@@ -899,7 +901,7 @@ function stepSummaries(){
   const be = validateBins();
   setStep(3, be ? be : `${S.bins.length} tramo(s): ${S.bins.slice(0, 3).map(binLabel).join(", ")}${S.bins.length > 3 ? "…" : ""}`, !be, be);
   const fm = $$("#fmts input:checked").map(i => i.value.toUpperCase());
-  setStep(4, fm.length ? fm.join(", ") + ($("#oLanes").checked ? " · pistas" : "") + ($("#oTypes").checked ? " · por tipo de vehículo" : "") : "Elija al menos un formato", fm.length, !fm.length);
+  setStep(4, fm.length ? fm.join(", ") + ($("#oLanes").checked ? " · pistas" : "") + ($("#oTypes").checked ? " · por tipo de vehículo" : "") + ($("#oV85").checked ? " · V85" : "") + ($("#oConf").checked ? " · confianza" : "") : "Elija al menos un formato", fm.length, !fm.length);
 }
 function openStep(n){
   $$(".step").forEach(st => st.classList.toggle("open", +st.dataset.s === n));
@@ -930,10 +932,13 @@ function rowsFor(L, date, q){
   const Q = (we ? m.qFds : m.qLab) * MONTH_F[mo] * (YEAR_F[y] || 1) * dayK;
   const prof = we ? t.vf : t.vl, W = we ? W_FDS : W_LAB;
   const nb = q.bins.length, out = [];
+  const z85 = 1.0364, ff = Math.max(...t.vl.concat(t.vf).filter(v => v), 30) * spdK;   // flujo libre: máxima velocidad del perfil HERE
   for (const [h0, h1] of q.hours){
     const exp = TYPES.map(() => new Array(nb).fill(0));
+    let v85w = 0, nw = 0;
     for (let h = h0; h < h1; h++){
       const N = Q * W[h], base = (prof[h] || prof.find(v => v) || 30) * spdK * (mo === 1 ? 1.03 : 1);
+      v85w += N * base * (1 + z85 * m.cv); nw += N;
       TYPES.forEach((ty, k) => {
         const mu = Math.max(3, base + ty.off), sd = Math.max(3, m.cv * mu), p = binProbs(mu, sd, L.lim, q.bins), n = N * m.shares[k];
         for (let b = 0; b < nb; b++) exp[k][b] += n * p[b];
@@ -941,7 +946,11 @@ function rowsFor(L, date, q){
     }
     const byType = exp.map(e => roundTo(e, Math.round(e.reduce((a, b) => a + b, 0))));
     const comb = q.bins.map((_, b) => byType.reduce((a, tArr) => a + tArr[b], 0));
-    out.push({ fecha: `${pad(date.getUTCDate())}-${pad(mo + 1)}-${y}`, horario: hbLabel([h0, h1]), counts: comb, total: comb.reduce((a, b) => a + b, 0), byType, dow, h0, h1 });
+    const total = comb.reduce((a, b) => a + b, 0);
+    const v85cd = nw ? v85w / nw : ff * (1 + z85 * m.cv), v85sd = ff * (1 + z85 * m.cv);
+    const conf = Math.max(5, Math.min(99, Math.round(100 * (1 - Math.exp(-total / 60)) * (t.perfil ? 1 : 0.7) * (t.fuente === "HGDS" ? 1 : 0.6) - 4 * r())));
+    out.push({ fecha: `${pad(date.getUTCDate())}-${pad(mo + 1)}-${y}`, horario: hbLabel([h0, h1]), counts: comb, total, byType, dow, h0, h1,
+      v85cd: Math.round(v85cd), v85sd: Math.round(v85sd), conf });
   }
   return out;
 }
@@ -955,6 +964,8 @@ function header(q){
   h.push("Total de vehículos");
   if (q.lanes) h.push("Cantidad de pistas");
   if (q.types) TYPES.forEach(ty => q.bins.forEach((b, i) => h.push(`${ty.n} - Tramo ${i + 1} (${binLabel(b)})`)));
+  if (q.v85) h.push("V85 con demora (km/h)", "V85 sin demora - flujo libre (km/h)", "Exceso V85 con demora sobre el límite (km/h)", "Exceso V85 sin demora sobre el límite (km/h)");
+  if (q.conf) h.push("Índice de confianza (0-100)");
   h.push("ID tramo", "Comuna", "Región", "Fuente del tramo");
   return h;
 }
@@ -962,6 +973,8 @@ function rowValues(L, r, q){
   const t = L.tramo, v = [L.id, t.sentido, +L.lat.toFixed(6), +L.lon.toFixed(6), t.ruta ? `${t.nombre} (Ruta ${t.ruta})` : t.nombre, r.fecha, r.horario, L.lim, ...r.counts, r.total];
   if (q.lanes) v.push(t.pistas ?? "");
   if (q.types) r.byType.forEach(arr => v.push(...arr));
+  if (q.v85) v.push(r.v85cd, r.v85sd, Math.max(0, r.v85cd - L.lim), Math.max(0, r.v85sd - L.lim));
+  if (q.conf) v.push(r.conf);
   v.push(t.id_tramo, t.comuna || "", t.region || "", t.fuente);
   return v;
 }
@@ -1010,7 +1023,9 @@ function metaRows(q, meta){
   return [["Parámetro", "Valor"], ["ID de archivo", meta.id], ["Generado", meta.when], ["Ubicaciones", q.locs.map(l => l.id).join(", ")],
     ["Meses", q.months.join(", ")], ["Tramos horarios", q.hours.map(hbLabel).join(", ")], ["Tramos de exceso", q.bins.map(binLabel).join(" | ")],
     ["Límites aplicados", q.locs.map(l => `${l.id}: ${l.lim} km/h${l.tramo.limite && l.tramo.limite !== l.lim ? " (registrado " + l.tramo.limite + ")" : ""}`).join("; ")],
-    ["Registros", meta.rows], ["Nota", "Demo: conteos simulados a partir de patrones históricos de velocidad HERE. En el servicio: HERE Traffic Analytics."]];
+    ["Registros", meta.rows], ...(q.v85 ? [["V85 con / sin demora", "V85 con demora: percentil 85 de la velocidad en el tramo horario (incluye congestión). V85 sin demora: percentil 85 a flujo libre (máxima velocidad del perfil HERE del tramo). Exceso = V85 - límite aplicado (0 si no lo supera)."]] : []),
+    ...(q.conf ? [["Índice de confianza", "0 a 100 según el tamaño muestral del tramo horario y la disponibilidad de patrón histórico HERE (mayor = más confiable)."]] : []),
+    ["Nota", "Demo: conteos, V85 e índice de confianza simulados a partir de patrones históricos de velocidad HERE. En el servicio: datos de sondas GPS."]];
 }
 async function writeShp(head, rows, q, base){
   const n = rows.length, enc = new TextEncoder();
@@ -1018,8 +1033,10 @@ async function writeShp(head, rows, q, base){
   q.bins.forEach((_, i) => short.push(`EXC_${i + 1}`)); short.push("TOTAL");
   if (q.lanes) short.push("PISTAS");
   if (q.types) ["LIV", "BUS", "CAM"].forEach(p => q.bins.forEach((_, i) => short.push(`${p}_${i + 1}`)));
+  if (q.v85) short.push("V85_CD", "V85_SD", "EXV85_CD", "EXV85_SD");
+  if (q.conf) short.push("CONFIANZA");
   short.push("ID_TRAMO", "COMUNA", "REGION", "FUENTE");
-  const types = head.map((h, i) => (i === 0 || i === 7 || (i >= 8 && i < 8 + q.bins.length + 1) || h === "Cantidad de pistas" || /^(Livianos|Buses|Camiones)/.test(h)) ? ["N", 12, 0] : (i === 2 || i === 3) ? ["N", 14, 6] : ["C", 100, 0]);
+  const types = head.map((h, i) => (i === 0 || i === 7 || (i >= 8 && i < 8 + q.bins.length + 1) || h === "Cantidad de pistas" || /^(Livianos|Buses|Camiones|V85 |Exceso V85|Índice de confianza)/.test(h)) ? ["N", 12, 0] : (i === 2 || i === 3) ? ["N", 14, 6] : ["C", 100, 0]);
   // .shp / .shx
   const shp = new DataView(new ArrayBuffer(100 + n * 28)), shx = new DataView(new ArrayBuffer(100 + n * 8));
   let xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -Infinity;
@@ -1068,7 +1085,7 @@ function renderHist(){
   const a = histLoad();
   $("#bHist").innerHTML = (a.length ? `<table class="hist"><thead><tr><th>ID archivo</th><th>Generado</th><th>Consulta</th><th>Registros</th><th>Disponible hasta</th><th></th></tr></thead><tbody>${a.map((e, i) => `<tr>
     <td><code>${esc(e.id)}</code></td><td>${esc(e.when)}</td>
-    <td>${e.q.locs.length} ubicación(es) · ${e.q.months.length} mes(es) · ${e.q.hours.length} tramo(s) horario(s) · ${e.q.bins.length} tramo(s) de exceso<br><span style="color:var(--muted)">${e.q.fmts.map(f => f.toUpperCase()).join(", ")}${e.q.types ? " · por tipo de vehículo" : ""}${e.q.lanes ? " · con pistas" : ""}</span></td>
+    <td>${e.q.locs.length} ubicación(es) · ${e.q.months.length} mes(es) · ${e.q.hours.length} tramo(s) horario(s) · ${e.q.bins.length} tramo(s) de exceso<br><span style="color:var(--muted)">${e.q.fmts.map(f => f.toUpperCase()).join(", ")}${e.q.types ? " · por tipo de vehículo" : ""}${e.q.lanes ? " · con pistas" : ""}${e.q.v85 ? " · V85" : ""}${e.q.conf ? " · confianza" : ""}</span></td>
     <td>${nf(e.rows)}</td><td>${new Date(e.expira).toLocaleDateString("es-CL")}</td>
     <td style="white-space:nowrap"><button class="btn sm" data-r="${i}">Re-descargar</button> <button class="btn sec sm" data-d="${i}">Eliminar</button></td></tr>`).join("")}</tbody></table>`
     : `<div class="empty">Todavía no se han generado archivos.</div>`) +
@@ -1117,13 +1134,14 @@ $("#go").onclick = () => { const { errs, q } = buildQuery(); if (errs.length){ t
 const BIN_COLORS = ["#1a9850", "#a6d96a", "#fee08b", "#fdae61", "#f46d43", "#d73027", "#a50026", "#67001f"];
 function renderSummary(q, rows){
   const byLoc = new Map();
-  for (const [L, r] of rows){ let s = byLoc.get(L.id); if (!s) byLoc.set(L.id, s = { L, counts: new Array(q.bins.length).fill(0), total: 0, hourly: new Array(24).fill(0) }); r.counts.forEach((c, i) => s.counts[i] += c); s.total += r.total; }
+  for (const [L, r] of rows){ let s = byLoc.get(L.id); if (!s) byLoc.set(L.id, s = { L, counts: new Array(q.bins.length).fill(0), total: 0, hourly: new Array(24).fill(0) }); r.counts.forEach((c, i) => s.counts[i] += c); s.total += r.total; s.v85w = (s.v85w || 0) + r.v85cd * r.total; s.v85sd = r.v85sd; s.cw = (s.cw || 0) + r.conf * r.total; }
   $("#bSum").innerHTML = `<div class="cards">${[...byLoc.values()].map(s => {
     const L = s.L, t = L.tramo, over = q.bins.reduce((a, b, i) => a + ((b[0] ?? -1e9) >= 1 ? s.counts[i] : 0), 0), max = Math.max(...s.counts, 1);
     const st = speedStats(L, q);
     return `<div class="card"><h4>ID ${esc(L.id)} · ${esc(t.nombre)}</h4><div class="sub">${esc(t.sentido)} · tramo ${esc(t.id_tramo)} · límite aplicado ${L.lim} km/h${t.pistas ? " · " + t.pistas + " pista(s)" : ""}</div>${t.sin != null ? `<div class="sub" style="margin-top:4px">Siniestros 2020-2025 (CONASET): <b>${nf(t.sin)}</b> · fallecidos ${nf(t.sinFall || 0)} · por velocidad ${nf(t.sinVel || 0)}${t.prio ? ` · prioridad de fiscalización <b>${esc(t.prio.toLowerCase())}</b> (${nf(t.iprio || 0)}/100)` : ""}</div>` : ""}
       <div class="kp"><div><b>${nf(s.total)}</b><span>vehículos</span></div><div><b>${s.total ? nf(over / s.total * 100, 1) : 0}%</b><span>sobre el límite</span></div><div><b>${nf(st.mean, 1)}</b><span>vel. media km/h</span></div>
       <div><b>${nf(st.p50)}</b><span>mediana km/h</span></div><div><b>${nf(st.p85)}</b><span>percentil 85 km/h</span></div><div><b>${nf(st.p95)}</b><span>percentil 95 km/h</span></div></div>
+      ${s.total ? `<div class="sub" style="margin-top:6px">V85 con demora <b>${nf(s.v85w / s.total)}</b> km/h · V85 sin demora (flujo libre) <b>${nf(s.v85sd)}</b> km/h · exceso V85 con demora <b>${nf(Math.max(0, s.v85w / s.total - L.lim))}</b> km/h · confianza <b>${nf(s.cw / s.total)}</b>/100 <i style="color:var(--sim)">(simulado)</i></div>` : ""}
       <div class="bars">${q.bins.map((b, i) => `<div class="bar"><span>${esc(binLabel(b))}</span><div class="tr"><div class="fill" style="width:${(s.counts[i] / max * 100).toFixed(1)}%;background:${BIN_COLORS[Math.min(i, 7)]}"></div></div><span class="v">${nf(s.counts[i])}</span></div>`).join("")}</div></div>`;
   }).join("")}</div><p class="hint">Valores del período consultado (${q.months.length} mes(es)). Conteos simulados para el demo sobre patrones históricos HERE.</p>`;
 }
@@ -1185,12 +1203,10 @@ if (window.top !== window.self){ $("#framed").hidden = false; $("#openTab").oncl
 S.bins = REF_BINS.map(b => b.slice());
 S.months.add(mKey(LAST.y, LAST.m));
 renderMonths(); renderHours(); renderBins(); renderLocs(); renderHist(); startMap();
-$("#oLanes").onchange = updateEstimate; $("#oTypes").onchange = updateEstimate; $$("#fmts input").forEach(i => i.onchange = updateEstimate);
+$("#oLanes").onchange = updateEstimate; $("#oTypes").onchange = updateEstimate; $("#oV85").onchange = updateEstimate; $("#oConf").onchange = updateEstimate; $$("#fmts input").forEach(i => i.onchange = updateEstimate);
 window.__demo = { S, addLocation, buildQuery, runQuery, rowsFor, locModel, build, renderLocs };
 </script>
 <script src="exceso-iframe.js"></script>  
 </body>
 </html>
-
-
 
