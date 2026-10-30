@@ -52,7 +52,7 @@
       hMode: $("#hMode").value, hDur: $("#hDur").value, hCustom: $("#hCustom").value,
       bins: S.bins.map(b => b.slice()),
       fmts: $$("#fmts input:checked").map(i => i.value),
-      lanes: $("#oLanes").checked, types: $("#oTypes").checked,
+      lanes: $("#oLanes").checked, types: $("#oTypes").checked, v85: $("#oV85").checked, conf: $("#oConf").checked,
       mail: $("#oMail").value.trim()
     };
   }
@@ -128,6 +128,8 @@
     $$("#fmts input").forEach(i => { i.checked = (st.fmts || []).includes(i.value); i.dispatchEvent(new Event("change")); });
     $("#oLanes").checked = !!st.lanes; $("#oLanes").dispatchEvent(new Event("change"));
     $("#oTypes").checked = !!st.types; $("#oTypes").dispatchEvent(new Event("change"));
+    if ($("#oV85")){ $("#oV85").checked = st.v85 !== false; $("#oV85").dispatchEvent(new Event("change")); }
+    if ($("#oConf")){ $("#oConf").checked = st.conf !== false; $("#oConf").dispatchEvent(new Event("change")); }
     $("#oMail").value = st.mail || "";
 
     // ubicaciones
